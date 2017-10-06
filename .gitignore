@@ -1,0 +1,5 @@
+.erlang.mk
+_rel
+deps
+ebin
+rel/extra.config
