@@ -1,0 +1,29 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+    <title>Agner Player</title>
+    <script src="/static/main.js"></script>
+
+</head>
+
+<body>
+<div id="player"></div>
+</body>
+
+<script type="text/javascript">
+    var tag;
+    var firstScriptTag;
+
+    tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    function onYouTubeIframeAPIReady() {
+        var wsHost = "ws://" + window.location.host + "/player";
+        var wsClient = new PlayerClient(wsHost);
+
+        wsClient.init();
+    }
+</script>
+</html> 
