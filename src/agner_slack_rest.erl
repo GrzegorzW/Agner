@@ -30,16 +30,18 @@ receive_data(ConnPid, MRef, StreamRef) ->
   receive
     {gun_data, ConnPid, StreamRef, nofin, Data} ->
       ParsedJson = jiffy:decode(Data, [return_maps]),
-      Ok = maps:get(<<"ok">>, ParsedJson),
-      case Ok of
-        true ->
-          maps:get(<<"url">>, ParsedJson);
-        _Else ->
-          exit({error, maps:get(<<"error">>, ParsedJson)})
-      end;
+      extract_url(ParsedJson);
     {'DOWN', MRef, process, ConnPid, Reason} ->
       error_logger:error_msg("Unable to obtain wss url"),
       exit(Reason)
   after 1000 ->
     exit(timeout)
   end.
+
+extract_url(#{<<"ok">> := true, <<"url">> := Url} = _ParsedJson) ->
+  binary_to_list(Url);
+extract_url(#{<<"error">> := Error} = _ParsedJson) ->
+  exit({error, Error});
+extract_url(ParsedJson) ->
+  exit({error, unable_to_extract_url, ParsedJson}).
+

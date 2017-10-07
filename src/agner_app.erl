@@ -5,6 +5,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+  ok = error_logger:logfile({open, "agner.log"}),
   Dispatch = cowboy_router:compile([
     {'_', [
       {"/", cowboy_static, {priv_file, agner, "index.html"}},
