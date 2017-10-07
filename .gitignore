@@ -1,5 +1,7 @@
-.erlang.mk
+gi.erlang.mk
 _rel
 deps
 ebin
 rel/extra.config
+npm-debug.log*
+node_modules/

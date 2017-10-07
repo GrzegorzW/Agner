@@ -1,0 +1,12 @@
+{
+  "name": "Agner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "babel": "babel ./priv/static/main.js -w -o ./priv/static/main-compiled.js"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.0.0",
+    "babel-preset-es2015": "~6.24.1"
+  }
+}
