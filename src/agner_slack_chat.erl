@@ -38,58 +38,42 @@ connect() ->
 %%
 handle_frame({text, Body}) ->
   ParsedJson = jiffy:decode(Body, [return_maps]),
-  case maps:get(<<"type">>, ParsedJson) of
-    <<"message">> ->
-      handle_message(ParsedJson);
-    _Type ->
-      unsupported_type
-  end.
+  handle_parsed_frame(ParsedJson).
 
-handle_message(Message) ->
-  case has_subtype(Message) of
-    true ->
-      case maps:get(<<"subtype">>, Message) of
-        <<"message_changed">> ->
-          handle_sub_message(maps:get(<<"message">>, Message));
-        <<"channel_join">> ->
-          erlang:display(<<"channel join">>),
-          erlang:display(Message);
-        _ ->
-          erlang:display(<<"UNSUPPORTED SUBTYPE">>),
-          erlang:display(Message)
-      end;
-    false ->
-      handle_text_message(maps:get(<<"text">>, Message))
-  end.
+handle_parsed_frame(#{<<"type">> := <<"message">>} = ParsedJson) ->
+  handle_message(ParsedJson);
+handle_parsed_frame(#{<<"type">> := Type} = _ParsedJson) ->
+  {unsupported_type, Type}.
 
-has_subtype(Message) ->
-  maps:is_key(<<"subtype">>, Message).
+handle_message(#{<<"subtype">> := <<"message_changed">>} = Message) ->
+  handle_sub_message(maps:get(<<"message">>, Message));
+handle_message(#{<<"subtype">> := <<"channel_join">>} = Message) ->
+  erlang:display(<<"channel join">>),
+  erlang:display(Message);
+handle_message(#{<<"subtype">> := SubType} = Message) ->
+  erlang:display(<<"UNSUPPORTED SUBTYPE">>),
+  erlang:display(SubType),
+  erlang:display(Message);
+handle_message(#{<<"text">> := Text} = _Message) ->
+  handle_text_message(Text).
 
-handle_sub_message(SubMessage) ->
-  case has_attachments(SubMessage) of
-    true ->
-      UserId = binary_to_list(maps:get(<<"user">>, SubMessage)),
-      handle_attachments(UserId, maps:get(<<"attachments">>, SubMessage));
-    false ->
-      no_attachments
-  end.
+handle_sub_message(#{<<"attachments">> := Attachments, <<"user">> := UserId} = _SubMessage) ->
+  handle_attachments(UserId, Attachments);
+handle_sub_message(_SubMessage) ->
+  no_attachments.
 
-has_attachments(Message) ->
-  maps:is_key(<<"attachments">>, Message).
-
+handle_attachments(UserId, [#{<<"video_html">> := _} = Attachment | Tail]) ->
+  MovieId = get_movie_id(Attachment),
+  Title = get_movie_title(Attachment),
+  agner_playlist:add(MovieId, Title, UserId),
+  handle_attachments(UserId, Tail);
+handle_attachments(UserId, [_Attachment | Tail]) ->
+  handle_attachments(UserId, Tail);
 handle_attachments(_UserId, []) ->
-  ok;
-handle_attachments(UserId, [Head | Tail]) ->
-  case maps:is_key(<<"video_html">>, Head) of
-    true ->
-      MovieId = extract_movie_id(maps:get(<<"from_url">>, Head)),
-      Title = binary_to_list(maps:get(<<"title">>, Head)),
-      agner_playlist:add(MovieId, Title, UserId);
-    false ->
-      no_attachments
-  end,
+  ok.
 
-  handle_attachments(UserId, Tail).
+get_movie_id(#{<<"from_url">> := MovieUrl} = _Attachment) ->
+  extract_movie_id(MovieUrl).
 
 extract_movie_id(MovieUrl) ->
   Decoded = cow_qs:urldecode(MovieUrl),
@@ -97,17 +81,12 @@ extract_movie_id(MovieUrl) ->
   [MovieId] = [V || {"v", V} <- mochiweb_util:parse_qs(Query)],
   MovieId.
 
+get_movie_title(#{<<"title">> := Title} = _Attachment) ->
+  binary_to_list(Title).
+
 handle_text_message(Text) ->
-  case resolve_intent(Text) of
-    {match, next, _Captured} ->
-      agner_playlist:next();
-    {match, volume, [Level]} ->
-      agner_playlist:volume(Level);
-    nomatch
-      ->
-      erlang:display(<<"nomatch">>),
-      erlang:display(Text)
-  end.
+  Intent = resolve_intent(Text),
+  handle_intent(Intent).
 
 resolve_intent(Text) ->
   resolve_intent(Text, [
@@ -118,9 +97,17 @@ resolve_intent(Text) ->
 resolve_intent(Text, [{Intent, Regex, Options} | Rest]) ->
   case re:run(Text, Regex, Options) of
     {match, Captured} ->
-      {match, Intent, Captured};
+      {Intent, Captured};
     nomatch ->
       resolve_intent(Text, Rest)
   end;
-resolve_intent(_Text, []) ->
-  nomatch.
+resolve_intent(Text, []) ->
+  {nomatch, Text}.
+
+handle_intent({next, _Captured}) ->
+  agner_playlist:next();
+handle_intent({volume, [Level]}) ->
+  agner_playlist:volume(Level);
+handle_intent({nomatch, Text}) ->
+  erlang:display(nomatch),
+  erlang:display(Text).
