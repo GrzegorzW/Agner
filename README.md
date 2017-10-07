@@ -24,6 +24,12 @@ And set `slack_token`
 make run
 ```
 
+In case of changes in js file modify main.js file and run
+
+```
+sudo npm run babel
+```
+
 For Windows user - instal [Cygwin](https://www.cygwin.com/) with make command
 
 Visit [localhost:7777](localhost:7777)
