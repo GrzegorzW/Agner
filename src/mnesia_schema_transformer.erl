@@ -16,6 +16,5 @@
 %%
 %%  {atomic, ok} = mnesia:transform_table(new_song, Transformer, record_info(fields, song), song),
 %%
-%%  erlang:display(<<"DONE!!">>),
-%%
+%%  error_logger:info_msg("DONE").%%
 %%  erlang:exit(done),

@@ -26,7 +26,7 @@ chat(Connected) ->
 
 connect() ->
   WssUrl = agner_slack_rest:obtain_wss_url(),
-  {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(binary_to_list(WssUrl)),
+  {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
 
   {ok, ConnPid} = gun:open(Host, 443),
   {ok, http} = gun:await_up(ConnPid),
@@ -48,12 +48,9 @@ handle_parsed_frame(#{<<"type">> := Type} = _ParsedJson) ->
 handle_message(#{<<"subtype">> := <<"message_changed">>} = Message) ->
   handle_sub_message(maps:get(<<"message">>, Message));
 handle_message(#{<<"subtype">> := <<"channel_join">>} = Message) ->
-  erlang:display(<<"channel join">>),
-  erlang:display(Message);
+  error_logger:info_msg("Channel joind. Message: ~s", [Message]);
 handle_message(#{<<"subtype">> := SubType} = Message) ->
-  erlang:display(<<"UNSUPPORTED SUBTYPE">>),
-  erlang:display(SubType),
-  erlang:display(Message);
+  error_logger:info_msg("Unsupported subtype: ~s. Message: ~s", [SubType, Message]);
 handle_message(#{<<"text">> := Text} = _Message) ->
   handle_text_message(Text).
 
@@ -109,5 +106,4 @@ handle_intent({next, _Captured}) ->
 handle_intent({volume, [Level]}) ->
   agner_playlist:volume(Level);
 handle_intent({nomatch, Text}) ->
-  erlang:display(nomatch),
-  erlang:display(Text).
+  error_logger:info_msg("Nomatch. Text: ~s", [Text]).

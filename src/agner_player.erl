@@ -44,5 +44,5 @@ websocket_info({volume, Level}, State) ->
   }),
   {reply, {text, Response}, State};
 websocket_info(Info, State) ->
-  erlang:display(Info),
+  error_logger:info_msg(Info),
   {ok, State}.

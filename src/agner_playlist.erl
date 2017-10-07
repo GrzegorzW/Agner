@@ -49,10 +49,7 @@ playlist(Queue, Subscribers) ->
   end.
 
 dispatch([SubscriberPid | Tail], Event) ->
-  erlang:display(<<"SEND TO PID">>),
-  erlang:display(SubscriberPid),
-  erlang:display(Event),
-
+  error_logger:info_msg("Sending '~s' event to pid: ~s", [SubscriberPid, Event]),
   SubscriberPid ! Event,
   dispatch(Tail, Event);
 dispatch([], _EventType) ->
