@@ -13,28 +13,21 @@ websocket_init(State) ->
   {ok, State}.
 
 websocket_handle({text, Msg}, State) ->
-  ParsedJson = jiffy:decode(Msg, [return_maps]),
+  JsonRequest = jiffy:decode(Msg, [return_maps]),
+  JsonResponse = websocket_handle_message(JsonRequest),
+  {reply, {text, JsonResponse}, State}.
 
-  case maps:get(<<"action">>, ParsedJson) of
-    <<"get">> ->
-      {MovieId, Source} = agner_playlist:get(),
-
-      Response = jiffy:encode(#{
-        <<"action">> => <<"play">>,
-        <<"movieId">> => list_to_binary(MovieId),
-        <<"source">> => Source
-      }),
-      {reply, {text, Response}, State};
-    <<"ping">> ->
-      Response = jiffy:encode(#{<<"action">> => <<"pong">>}),
-      {reply, {text, Response}, State};
-    _ ->
-      Response = jiffy:encode(#{
-        <<"action">> => <<"error">>,
-        <<"reason">> => <<"unsupported_action">>
-      }),
-      {reply, {text, Response}, State}
-  end.
+websocket_handle_message(#{<<"action">> := <<"get">>} = _ParsedJson) ->
+  {MovieId, Source} = agner_playlist:get(),
+  jiffy:encode(#{
+    <<"action">> => <<"play">>,
+    <<"movieId">> => list_to_binary(MovieId),
+    <<"source">> => Source
+  });
+websocket_handle_message(#{<<"action">> := <<"ping">>} = _ParsedJson) ->
+  jiffy:encode(#{<<"action">> => <<"pong">>});
+websocket_handle_message(_ParsedJson) ->
+  jiffy:encode(#{<<"action">> => <<"error">>, <<"reason">> => <<"unsupported_action">>}).
 
 websocket_info({timeout, _Ref, Msg}, State) ->
   {reply, {text, Msg}, State};
