@@ -12,10 +12,10 @@ Slack bot to create and control playlist based on YouTube movies.
 
 ### Installing
 
-Create [Bot User](https://api.slack.com/bot-users) and generate `slack_token` for Slack API communication. 
+Create [Bot User](https://api.slack.com/bot-users) and generate `slack_token` for Slack API communication.
 
 ```
-cp rel/extra.config.dist rel/config.dist
+cp rel/extra.config.dist rel/extra.config
 ```
 
 And set `slack_token`
@@ -23,6 +23,8 @@ And set `slack_token`
 ```
 make run
 ```
+
+For Windows user - instal [Cygwin](https://www.cygwin.com/) with make command
 
 Visit [localhost:7777](localhost:7777)
 
