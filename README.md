@@ -19,20 +19,21 @@ cp rel/extra.config.dist rel/config.dist
 ```
 
 And set `slack_token`
+### Usage
+
+In order to run server execute command:
 
 ```
 make run
 ```
 
-Visit [localhost:7777](localhost:7777)
+To add movie, send YouTube url to Your bot using Slack.
 
-### Usage
-
-* To add movie, send YouTube url to Your bot.
-
-* To manage playlist type normal message.
+In order to play songs visit [localhost:7777](localhost:7777)
 
 ### Available message commands
+
+To manage playlist type normal message.
 
 ```
 next
