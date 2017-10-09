@@ -18,7 +18,8 @@ playlist(Queue, Subscribers) ->
     {From, {get}} ->
       case queue:is_empty(Queue) of
         true ->
-          From ! {ok, agner_mnesia:get_random_movie(), random},
+          {ok, MovieId} = agner_mnesia:get_random_movie(),
+          From ! {ok, MovieId, random},
           playlist(Queue, Subscribers);
         false ->
           {{value, Item}, Q2} = queue:out(Queue),
