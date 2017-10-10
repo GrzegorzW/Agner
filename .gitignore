@@ -2,7 +2,8 @@
 _rel
 deps
 ebin
+rel/config.dist
 rel/extra.config
 npm-debug.log*
 node_modules/
-./priv/static/main-compiled.js
+priv/static/main-compiled.js
