@@ -54,9 +54,9 @@ get_random_movie() ->
 %%
 %%todo do it in efficient way
 %%
+get_random_movie([]) ->
+  {error, no_songs};
 get_random_movie(Keys) ->
   Key = lists:nth(rand:uniform(length(Keys)), Keys),
   [#song{movie_id = MovieId}] = mnesia:dirty_read({song, Key}),
-  {ok, MovieId};
-get_random_movie([]) ->
-  {error, no_songs}.
+  {ok, MovieId}.
