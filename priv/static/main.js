@@ -1,47 +1,59 @@
-const PlayerClient = function (wssHost) {
-  let webSocket;
-  let timerId;
+class PlayerClient {
+  constructor(wssHost) {
+    this.webSocket = new WebSocket(wssHost);
+    this.init = this.init.bind(this);
+    this.onOpen = this.onOpen.bind(this);
+    this.onClose = this.onClose.bind(this);
+    this.onMessage = this.onMessage.bind(this);
+    this.onError = this.onError.bind(this);
+    this.setupPlayer = this.setupPlayer.bind(this);
+    this.keepAlive = this.keepAlive.bind(this);
+    this.cancelKeepAlive = this.cancelKeepAlive.bind(this);
+    this.sendVideoIdRequest = this.sendVideoIdRequest.bind(this);
+    this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
+    this.setVolume = this.setVolume.bind(this);
+    this.playVideo = this.playVideo.bind(this);
+  }
 
-  const keepAlive = () => {
+  keepAlive() {
     const timeout = 20000;
-    if (webSocket.readyState === webSocket.OPEN) {
-      webSocket.send(JSON.stringify({action: "ping"}));
+    if (this.webSocket.readyState === this.webSocket.OPEN) {
+      this.webSocket.send(JSON.stringify({action: "ping"}));
     }
-    timerId = setTimeout(keepAlive, timeout);
+    this.timerId = setTimeout(this.keepAlive, timeout);
   }
 
-  const cancelKeepAlive = () => {
-    if (timerId) {
-      clearTimeout(timerId);
+  cancelKeepAlive() {
+    if (this.timerId) {
+      clearTimeout(this.timerId);
     }
   }
 
-  const init = () => {
-    webSocket = new WebSocket(wssHost);
-    webSocket.onopen = () => {
-      onOpen();
+  init() {
+    this.webSocket.onopen = () => {
+      this.onOpen();
     };
-    webSocket.onclose = (evt) => {
-      onClose(evt);
-    };;
-    webSocket.onmessage = (evt) => {
-      onMessage(evt);
+    this.webSocket.onclose = (evt) => {
+      this.onClose(evt);
     };
-    webSocket.onerror = (evt) => {
-      onError(evt);
+    this.webSocket.onmessage = (evt) => {
+      this.onMessage(evt);
+    };
+    this.webSocket.onerror = (evt) => {
+      this.onError(evt);
     };
   }
 
-  const onOpen = () => {
-    setupPlayer();
-    keepAlive();
+  onOpen() {
+    this.setupPlayer();
+    this.keepAlive();
   }
 
-  const onClose = (evt) => {
-    cancelKeepAlive();
+  onClose(evt) {
+    this.cancelKeepAlive();
   }
 
-  const onMessage = (evt) => {
+  onMessage(evt) {
     const msg = JSON.parse(evt.data);
 
     console.log(msg.action);
@@ -49,52 +61,50 @@ const PlayerClient = function (wssHost) {
 
     switch (msg.action) {
       case "play":
-      var video = {
-        "movieId": msg.movieId,
-        "source": msg.source
-      };
-      playVideo(video);
+        var video = {
+          "movieId": msg.movieId,
+          "source": msg.source
+        };
+        this.playVideo(video);
       break;
       case "next":
-      sendVideoIdRequest();
+        this.sendVideoIdRequest();
       break;
       case "added_to_empty_queue":
-      if (!this.currentVideo && this.currentVideo.source !== "queue") {
-        sendVideoIdRequest();
-      }
+        if (!this.currentVideo && this.currentVideo.source !== "queue") {
+          this.sendVideoIdRequest();
+        }
       break;
       case "volume":
-      setVolume(msg.level);
+        this.setVolume(msg.level);
       break;
       case "pong":
       break;
       default:
-      console.log("default", msg.action);
+        console.log("default", msg.action);
     }
   }
 
-  const onError = (evt) => {
-    cancelKeepAlive();
+  onError(evt) {
+    this.cancelKeepAlive();
   }
 
   //===========================================
   //==================== YT ===================
   //===========================================
 
-  let player;
-
-  const setupPlayer = () => {
-    player = new YT.Player('player', {
+  setupPlayer() {
+    this.player = new YT.Player('player', {
       height: '360',
       width: '640',
       events: {
-        'onReady': sendVideoIdRequest,
-        'onStateChange': onPlayerStateChange
+        'onReady': this.sendVideoIdRequest,
+        'onStateChange': this.onPlayerStateChange
       }
     });
   }
 
-  const onPlayerStateChange = (event) => {
+  onPlayerStateChange(event) {
     //        YT.PlayerState.UNSTARTED
     //        YT.PlayerState.ENDED
     //        YT.PlayerState.PLAYING
@@ -102,24 +112,20 @@ const PlayerClient = function (wssHost) {
     //        YT.PlayerState.BUFFERING
     //        YT.PlayerState.CUED
     if (event.data === YT.PlayerState.ENDED) {
-      setTimeout(sendVideoIdRequest, 2000);
+      setTimeout(this.sendVideoIdRequest, 2000);
     }
   }
 
-  const playVideo = (video) => {
+  playVideo(video) {
     this.currentVideo = video;
-    player.loadVideoById(video.movieId);
+    this.player.loadVideoById(video.movieId);
   }
 
-  const setVolume = (volume) => {
-    player.setVolume(volume);
+  setVolume(volume) {
+    this.player.setVolume(volume);
   }
 
-  const sendVideoIdRequest = () => {
-    webSocket.send(JSON.stringify({action: "get"}));
-  }
-
-  return {
-    'init': init
+  sendVideoIdRequest() {
+    this.webSocket.send(JSON.stringify({action: "get"}));
   }
 };
