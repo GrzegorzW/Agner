@@ -1,126 +1,130 @@
-PlayerClient = function (wssHost) {
-    var webSocket;
-    var timerId;
+function es6BindAll(context, methodNames) {
+    methodNames.map(function(methodName) {
+    context[methodName] = context[methodName].bind(context);
+  });
+};
 
-    function keepAlive() {
-        var timeout = 20000;
-        if (webSocket.readyState === webSocket.OPEN) {
-            webSocket.send(JSON.stringify({action: "ping"}));
-        }
-        timerId = setTimeout(keepAlive, timeout);
+class PlayerClient {
+  constructor(wssHost) {
+    this.webSocket = new WebSocket(wssHost);
+    es6BindAll(this, [
+      'init', 'onOpen', 'onClose', 'onMessage', 'onError',
+      'setupPlayer', 'keepAlive', 'cancelKeepAlive', 'sendVideoIdRequest',
+      'onPlayerStateChange', 'setVolume', 'playVideo'
+    ]);
+  }
+
+  keepAlive() {
+    const timeout = 20000;
+    if (this.webSocket.readyState === this.webSocket.OPEN) {
+      this.webSocket.send(JSON.stringify({action: "ping"}));
     }
+    this.timerId = setTimeout(this.keepAlive, timeout);
+  }
 
-    function cancelKeepAlive() {
-        if (timerId) {
-            clearTimeout(timerId);
-        }
+  cancelKeepAlive() {
+    if (this.timerId) {
+      clearTimeout(this.timerId);
     }
+  }
 
-    function init() {
-        webSocket = new WebSocket(wssHost);
-        webSocket.onopen = function () {
-            onOpen()
+  init() {
+    this.webSocket.onopen = () => {
+      this.onOpen();
+    };
+    this.webSocket.onclose = (evt) => {
+      this.onClose(evt);
+    };
+    this.webSocket.onmessage = (evt) => {
+      this.onMessage(evt);
+    };
+    this.webSocket.onerror = (evt) => {
+      this.onError(evt);
+    };
+  }
+
+  onOpen() {
+    this.setupPlayer();
+    this.keepAlive();
+  }
+
+  onClose(evt) {
+    this.cancelKeepAlive();
+  }
+
+  onMessage(evt) {
+    const msg = JSON.parse(evt.data);
+
+    console.log(msg.action);
+    console.log(this.currentVideo ? this.currentVideo : 'no current video');
+
+    switch (msg.action) {
+      case "play":
+        var video = {
+          "movieId": msg.movieId,
+          "source": msg.source
         };
-        webSocket.onclose = function (evt) {
-            onClose(evt)
-        };
-        webSocket.onmessage = function (evt) {
-            onMessage(evt)
-        };
-        webSocket.onerror = function (evt) {
-            onError(evt)
-        };
-    }
-
-    function onOpen() {
-        setupPlayer();
-        keepAlive();
-    }
-
-    function onClose(evt) {
-        cancelKeepAlive();
-    }
-
-    function onMessage(evt) {
-        var msg = JSON.parse(evt.data);
-
-        console.log(msg.action);
-        console.log(this.currentVideo);
-
-        switch (msg.action) {
-            case "play":
-                var video = {
-                    "movieId": msg.movieId,
-                    "source": msg.source
-                };
-
-                playVideo(video);
-                break;
-            case "next":
-                sendVideoIdRequest();
-                break;
-            case "added_to_empty_queue":
-                if (this.currentVideo !== undefined && this.currentVideo.source !== "queue") {
-                    sendVideoIdRequest();
-                }
-                break;
-            case "volume":
-                setVolume(msg.level);
-                break;
-            case "pong":
-                break;
-            default:
-                console.log("default", msg.action);
+        this.playVideo(video);
+      break;
+      case "next":
+        this.sendVideoIdRequest();
+      break;
+      case "added_to_empty_queue":
+        if (!this.currentVideo && this.currentVideo.source !== "queue") {
+          this.sendVideoIdRequest();
         }
+      break;
+      case "volume":
+        this.setVolume(msg.level);
+      break;
+      case "pong":
+      break;
+      default:
+        console.log("default", msg.action);
     }
+  }
 
-    function onError(evt) {
-        cancelKeepAlive();
+  onError(evt) {
+    this.cancelKeepAlive();
+  }
+
+  //===========================================
+  //==================== YT ===================
+  //===========================================
+
+  setupPlayer() {
+    this.player = new YT.Player('player', {
+      height: '360',
+      width: '640',
+      events: {
+        'onReady': this.sendVideoIdRequest,
+        'onStateChange': this.onPlayerStateChange
+      }
+    });
+  }
+
+  onPlayerStateChange(event) {
+    //        YT.PlayerState.UNSTARTED
+    //        YT.PlayerState.ENDED
+    //        YT.PlayerState.PLAYING
+    //        YT.PlayerState.PAUSED
+    //        YT.PlayerState.BUFFERING
+    //        YT.PlayerState.CUED
+    if (event.data === YT.PlayerState.ENDED) {
+      setTimeout(this.sendVideoIdRequest, 2000);
     }
+  }
 
-    //===========================================
-    //==================== YT ===================
-    //===========================================
+  playVideo(video) {
+    this.currentVideo = video;
+    this.player.loadVideoById(video.movieId);
+  }
 
-    var player;
+  setVolume(volume) {
+    this.player.setVolume(volume);
+  }
 
-    function setupPlayer() {
-        player = new YT.Player('player', {
-            height: '360',
-            width: '640',
-            events: {
-                'onReady': sendVideoIdRequest,
-                'onStateChange': onPlayerStateChange
-            }
-        });
-    }
-
-    function onPlayerStateChange(event) {
-//        YT.PlayerState.UNSTARTED
-//        YT.PlayerState.ENDED
-//        YT.PlayerState.PLAYING
-//        YT.PlayerState.PAUSED
-//        YT.PlayerState.BUFFERING
-//        YT.PlayerState.CUED
-        if (event.data === YT.PlayerState.ENDED) {
-            setTimeout(sendVideoIdRequest, 2000);
-        }
-    }
-
-    function playVideo(video) {
-        this.currentVideo = video;
-        player.loadVideoById(video.movieId)
-    }
-
-    function setVolume(volume) {
-        player.setVolume(volume)
-    }
-
-    function sendVideoIdRequest() {
-        webSocket.send(JSON.stringify({action: "get"}));
-    }
-
-    return {
-        'init': init
-    }
+  sendVideoIdRequest() {
+    this.webSocket.send(JSON.stringify({action: "get"}));
+  }
 };
