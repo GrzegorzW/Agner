@@ -1,18 +1,17 @@
+function es6BindAll(context, methodNames) {
+    methodNames.map(function(methodName) {
+    context[methodName] = context[methodName].bind(context);
+  });
+};
+
 class PlayerClient {
   constructor(wssHost) {
     this.webSocket = new WebSocket(wssHost);
-    this.init = this.init.bind(this);
-    this.onOpen = this.onOpen.bind(this);
-    this.onClose = this.onClose.bind(this);
-    this.onMessage = this.onMessage.bind(this);
-    this.onError = this.onError.bind(this);
-    this.setupPlayer = this.setupPlayer.bind(this);
-    this.keepAlive = this.keepAlive.bind(this);
-    this.cancelKeepAlive = this.cancelKeepAlive.bind(this);
-    this.sendVideoIdRequest = this.sendVideoIdRequest.bind(this);
-    this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
-    this.setVolume = this.setVolume.bind(this);
-    this.playVideo = this.playVideo.bind(this);
+    es6BindAll(this, [
+      'init', 'onOpen', 'onClose', 'onMessage', 'onError',
+      'setupPlayer', 'keepAlive', 'cancelKeepAlive', 'sendVideoIdRequest',
+      'onPlayerStateChange', 'setVolume', 'playVideo'
+    ]);
   }
 
   keepAlive() {
