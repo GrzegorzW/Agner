@@ -46,7 +46,7 @@ playlist(Queue, Subscribers) ->
       playlist(Queue, Subscribers);
     {From, {subscribe, SubscriberPid}} ->
       From ! ok,
-      playlist(Queue, lists:append(Subscribers, [SubscriberPid]))
+      playlist(Queue, [SubscriberPid])
   end.
 
 dispatch([SubscriberPid | Tail], Event) ->
