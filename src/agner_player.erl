@@ -43,6 +43,8 @@ websocket_info({volume, Level}, State) ->
     <<"level">> => Level
   }),
   {reply, {text, Response}, State};
+websocket_info(stop, State) ->
+  {stop, State};
 websocket_info(Info, State) ->
   error_logger:info_msg(Info),
   {ok, State}.

@@ -18,7 +18,8 @@ playlist(Queue, Subscribers) ->
     {From, {get}} ->
       case queue:is_empty(Queue) of
         true ->
-          From ! {ok, agner_mnesia:get_random_movie(), random},
+          {ok, MovieId} = agner_mnesia:get_random_movie(),
+          From ! {ok, MovieId, random},
           playlist(Queue, Subscribers);
         false ->
           {{value, Item}, Q2} = queue:out(Queue),
@@ -45,7 +46,8 @@ playlist(Queue, Subscribers) ->
       playlist(Queue, Subscribers);
     {From, {subscribe, SubscriberPid}} ->
       From ! ok,
-      playlist(Queue, lists:append(Subscribers, [SubscriberPid]))
+      detach(Subscribers),
+      playlist(Queue, [SubscriberPid])
   end.
 
 dispatch([SubscriberPid | Tail], Event) ->
@@ -62,6 +64,12 @@ subscribe(SubscriberPid) ->
   after 1000 ->
     timeout
   end.
+
+detach([SubscriberPid | Tail]) ->
+  SubscriberPid ! stop,
+  detach(Tail);
+detach([]) ->
+  ok.
 
 get() ->
   playlist ! {self(), {get}},

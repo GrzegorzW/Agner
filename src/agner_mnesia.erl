@@ -49,6 +49,14 @@ add_movie(MovieId, Title, AuthorId) ->
 
 get_random_movie() ->
   Keys = mnesia:dirty_all_keys(song),
+  get_random_movie(Keys).
+
+%%
+%%todo do it in efficient way
+%%
+get_random_movie([]) ->
+  {error, no_songs};
+get_random_movie(Keys) ->
   Key = lists:nth(rand:uniform(length(Keys)), Keys),
-  [#song{movie_id = X}] = mnesia:dirty_read({song, Key}),
-  X.
+  [#song{movie_id = MovieId}] = mnesia:dirty_read({song, Key}),
+  {ok, MovieId}.
