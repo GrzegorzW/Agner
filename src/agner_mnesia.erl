@@ -42,10 +42,10 @@ ensure_mnesia_dir() ->
 add_movie(MovieId, Title, AuthorId) ->
   mnesia:wait_for_tables([song], 1000),
 
-  Fun = fun() ->
+  Add = fun() ->
     mnesia:write(#song{movie_id = MovieId, title = Title, author_id = AuthorId})
         end,
-  {atomic, ok} = mnesia:transaction(Fun).
+  {atomic, ok} = mnesia:transaction(Add).
 
 get_random_movie() ->
   Keys = mnesia:dirty_all_keys(song),
