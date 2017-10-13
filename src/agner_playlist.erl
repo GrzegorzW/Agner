@@ -46,6 +46,7 @@ playlist(Queue, Subscribers) ->
       playlist(Queue, Subscribers);
     {From, {subscribe, SubscriberPid}} ->
       From ! ok,
+      detach(Subscribers),
       playlist(Queue, [SubscriberPid])
   end.
 
@@ -63,6 +64,12 @@ subscribe(SubscriberPid) ->
   after 1000 ->
     timeout
   end.
+
+detach([SubscriberPid | Tail]) ->
+  SubscriberPid ! stop,
+  detach(Tail);
+detach([]) ->
+  ok.
 
 get() ->
   playlist ! {self(), {get}},
