@@ -10,7 +10,6 @@ start(_Type, _Args) ->
     {'_', [
       {"/", cowboy_static, {priv_file, agner, "index.html"}},
       {"/static/[...]", cowboy_static, {priv_dir, agner, "static"}},
-      {"/health", agner_health, []},
       {"/player", agner_player, []}
     ]}
   ]),
