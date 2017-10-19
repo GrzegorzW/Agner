@@ -1,78 +1,57 @@
 -module(agner_playlist).
 
--export([start/0]).
+-export([start/1]).
 -export([playlist/2]).
 -export([get/0]).
 -export([add/3]).
 -export([next/0]).
--export([subscribe/1]).
--export([volume/1]).
 
-start() ->
+start(Subscriber) ->
+  case whereis(playlist) of
+    undefined -> ok;
+    Pid ->
+      unregister(playlist),
+      exit(Pid, kill)
+  end,
+
   Queue = queue:new(),
-  Subscribers = [],
-  register(playlist, spawn(?MODULE, playlist, [Queue, Subscribers])).
+  register(playlist, spawn(?MODULE, playlist, [Queue, Subscriber])).
 
-playlist(Queue, Subscribers) ->
+playlist(Queue, Subscriber) ->
   receive
-    {From, {get}} ->
+    {From, get} ->
       case queue:is_empty(Queue) of
         true ->
           {ok, MovieId} = agner_mnesia:get_random_movie(),
           From ! {ok, MovieId, random},
-          playlist(Queue, Subscribers);
+          playlist(Queue, Subscriber);
         false ->
           {{value, Item}, Q2} = queue:out(Queue),
           From ! {ok, Item, queue},
-          playlist(Q2, Subscribers)
+          playlist(Q2, Subscriber)
       end;
     {From, {add, MovieId, Title, User}} ->
       From ! ok,
       agner_mnesia:add_movie(MovieId, Title, User),
       case queue:is_empty(Queue) of
         true ->
-          dispatch(Subscribers, added_to_empty_queue);
+          dispatch(Subscriber, added_to_empty_queue);
         false ->
           ok
       end,
-      playlist(queue:in(MovieId, Queue), Subscribers);
-    {From, {next}} ->
+      playlist(queue:in(MovieId, Queue), Subscriber);
+    {From, next} ->
       From ! ok,
-      dispatch(Subscribers, next),
-      playlist(Queue, Subscribers);
-    {From, {volume, Level}} ->
-      From ! ok,
-      dispatch(Subscribers, {volume, Level}),
-      playlist(Queue, Subscribers);
-    {From, {subscribe, SubscriberPid}} ->
-      From ! ok,
-      detach(Subscribers),
-      playlist(Queue, [SubscriberPid])
+      dispatch(Subscriber, next),
+      playlist(Queue, Subscriber)
   end.
 
-dispatch([SubscriberPid | Tail], Event) ->
-  error_logger:info_msg("Sending '~s' event to pid: ~s", [SubscriberPid, Event]),
-  SubscriberPid ! Event,
-  dispatch(Tail, Event);
-dispatch([], _EventType) ->
-  ok.
-
-subscribe(SubscriberPid) ->
-  playlist ! {self(), {subscribe, SubscriberPid}},
-  receive
-    ok -> ok
-  after 1000 ->
-    timeout
-  end.
-
-detach([SubscriberPid | Tail]) ->
-  SubscriberPid ! stop,
-  detach(Tail);
-detach([]) ->
-  ok.
+dispatch(Subscriber, Event) ->
+  error_logger:info_msg("Sending '~s' event to pid: ~s", [Subscriber, Event]),
+  Subscriber ! Event.
 
 get() ->
-  playlist ! {self(), {get}},
+  playlist ! {self(), get},
   receive
     {ok, MovieId, Source} ->
       {MovieId, Source}
@@ -89,17 +68,9 @@ add(MovieId, Title, User) ->
   end.
 
 next() ->
-  playlist ! {self(), {next}},
+  playlist ! {self(), next},
   receive
-    {ok} -> {ok}
-  after 1000 ->
-    timeout
-  end.
-
-volume(Level) ->
-  playlist ! {self(), {volume, Level}},
-  receive
-    {ok} -> {ok}
+    ok -> ok
   after 1000 ->
     timeout
   end.

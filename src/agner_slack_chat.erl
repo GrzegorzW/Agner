@@ -104,6 +104,6 @@ resolve_intent(Text, []) ->
 handle_intent({next, _Captured}) ->
   agner_playlist:next();
 handle_intent({volume, [Level]}) ->
-  agner_playlist:volume(Level);
+  agner_player:volume(Level);
 handle_intent({nomatch, Text}) ->
   error_logger:info_msg("Nomatch. Text: ~s", [Text]).

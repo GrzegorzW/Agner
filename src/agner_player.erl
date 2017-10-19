@@ -4,12 +4,14 @@
 -export([websocket_init/1]).
 -export([websocket_handle/2]).
 -export([websocket_info/2]).
+-export([player/1]).
+-export([volume/1]).
 
 init(Req, Opts) ->
-  {cowboy_websocket, Req, Opts}.
+  {cowboy_websocket, Req, Opts, #{idle_timeout => 3000}}.
 
 websocket_init(State) ->
-  agner_playlist:subscribe(self()),
+  start_player(self()),
   {ok, State}.
 
 websocket_handle({text, Msg}, State) ->
@@ -48,3 +50,31 @@ websocket_info(stop, State) ->
 websocket_info(Info, State) ->
   error_logger:info_msg(Info),
   {ok, State}.
+
+start_player(ConnectionPid) ->
+  case whereis(player) of
+    undefined -> ok;
+    Pid ->
+      unregister(player),
+      exit(Pid, kill)
+  end,
+
+  agner_playlist:start(self()),
+
+  register(player, spawn(?MODULE, player, [ConnectionPid])).
+
+player(ConnectionPid) ->
+  receive
+    {From, {volume, Level}} ->
+      From ! ok,
+      ConnectionPid ! {volume, Level},
+      player(ConnectionPid)
+  end.
+
+volume(Level) ->
+  player ! {self(), {volume, Level}},
+  receive
+    ok -> ok
+  after 1000 ->
+    timeout
+  end.

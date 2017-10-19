@@ -17,7 +17,6 @@ start(_Type, _Args) ->
 
   agner_slack_chat:start(),
   agner_mnesia:start(),
-  agner_playlist:start(),
 
   agner_sup:start_link().
 

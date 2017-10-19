@@ -1,0 +1,12 @@
+version: "2"
+services:
+  chat:
+    image: erlang:latest
+    container_name: agner
+    volumes:
+      - .:/agner
+    working_dir: /agner
+    command: make run
+    tty: true
+    ports:
+      - "7777:7777"
