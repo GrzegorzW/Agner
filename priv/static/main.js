@@ -3,7 +3,7 @@ PlayerClient = function (wssHost) {
     var timerId;
 
     function keepAlive() {
-        var timeout = 20000;
+        var timeout = 5000;
         if (webSocket.readyState === webSocket.OPEN) {
             webSocket.send(JSON.stringify({action: "ping"}));
         }
@@ -17,6 +17,8 @@ PlayerClient = function (wssHost) {
     }
 
     function init() {
+        console.log('init: ' + wssHost);
+
         webSocket = new WebSocket(wssHost);
         webSocket.onopen = function () {
             onOpen()
@@ -38,6 +40,9 @@ PlayerClient = function (wssHost) {
     }
 
     function onClose(evt) {
+        console.log('onClose');
+        console.log(evt);
+
         cancelKeepAlive();
     }
 
@@ -45,7 +50,6 @@ PlayerClient = function (wssHost) {
         var msg = JSON.parse(evt.data);
 
         console.log(msg.action);
-        console.log(this.currentVideo);
 
         switch (msg.action) {
             case "play":

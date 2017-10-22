@@ -1,10 +1,15 @@
 -module(agner_slack_chat).
 
 -export([start/0]).
+-export([start_link/0]).
 -export([chat/1]).
 
 start() ->
-  register(chat, spawn(?MODULE, chat, [false])).
+  spawn(?MODULE, chat, [false]).
+
+start_link() ->
+  Pid = spawn_link(?MODULE, chat, [false]),
+  {ok, Pid}.
 
 chat(Connected) ->
   if
@@ -31,6 +36,9 @@ connect() ->
   {ok, ConnPid} = gun:open(Host, 443),
   {ok, http} = gun:await_up(ConnPid),
   gun:ws_upgrade(ConnPid, Path),
+
+  error_logger:info_msg("Slack chat connected: ~p", [self()]),
+
   {ok, ConnPid}.
 
 %%
@@ -62,7 +70,7 @@ handle_sub_message(_SubMessage) ->
 handle_attachments(UserId, [#{<<"video_html">> := _} = Attachment | Tail]) ->
   MovieId = get_movie_id(Attachment),
   Title = get_movie_title(Attachment),
-  agner_playlist:add(MovieId, Title, UserId),
+  agner_player_server:add(MovieId, Title, UserId),
   handle_attachments(UserId, Tail);
 handle_attachments(UserId, [_Attachment | Tail]) ->
   handle_attachments(UserId, Tail);
@@ -102,8 +110,8 @@ resolve_intent(Text, []) ->
   {nomatch, Text}.
 
 handle_intent({next, _Captured}) ->
-  agner_playlist:next();
+  agner_player_server:next();
 handle_intent({volume, [Level]}) ->
-  agner_player:volume(Level);
+  agner_player_server:volume(Level);
 handle_intent({nomatch, Text}) ->
   error_logger:info_msg("Nomatch. Text: ~s", [Text]).

@@ -10,12 +10,11 @@ start(_Type, _Args) ->
     {'_', [
       {"/", cowboy_static, {priv_file, agner, "index.html"}},
       {"/static/[...]", cowboy_static, {priv_dir, agner, "static"}},
-      {"/player", agner_player, []}
+      {"/player", agner_player_client, []}
     ]}
   ]),
   {ok, _} = cowboy:start_clear(http, [{port, 7777}], #{env => #{dispatch => Dispatch}}),
 
-  agner_slack_chat:start(),
   agner_mnesia:start(),
 
   agner_sup:start_link().
