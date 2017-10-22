@@ -26,6 +26,9 @@ websocket_handle_message(#{<<"action">> := <<"get">>} = _ParsedJson) ->
   noreply;
 websocket_handle_message(#{<<"action">> := <<"ping">>} = _ParsedJson) ->
   {reply, jiffy:encode(#{<<"action">> => <<"pong">>})};
+websocket_handle_message(#{<<"action">> := <<"delete">>, <<"movieId">> := MovieId} = _ParsedJson) ->
+  ok = agner_player_server:delete(binary_to_list(MovieId)),
+  noreply;
 websocket_handle_message(_ParsedJson) ->
   {reply, jiffy:encode(#{<<"action">> => <<"error">>, <<"reason">> => <<"unsupported_action">>})}.
 
@@ -48,6 +51,15 @@ websocket_info({get, MovieId, Source}, State) ->
     <<"action">> => <<"play">>,
     <<"movieId">> => list_to_binary(MovieId),
     <<"source">> => Source
+  }),
+  {reply, {text, Response}, State};
+websocket_info(delete, State) ->
+  Response = jiffy:encode(#{<<"action">> => <<"delete">>}),
+  {reply, {text, Response}, State};
+websocket_info({deleted, MovieId}, State) ->
+  Response = jiffy:encode(#{
+    <<"action">> => <<"deleted">>,
+    <<"movieId">> => list_to_binary(MovieId)
   }),
   {reply, {text, Response}, State};
 websocket_info(stop, State) ->

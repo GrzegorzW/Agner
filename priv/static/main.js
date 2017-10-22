@@ -71,6 +71,12 @@ PlayerClient = function (wssHost) {
             case "volume":
                 setVolume(msg.level);
                 break;
+            case "delete":
+                sendDeleteCurrentVideoRequest();
+                break;
+            case "deleted":
+                sendVideoIdRequest();
+                break;
             case "pong":
                 break;
             default:
@@ -122,6 +128,13 @@ PlayerClient = function (wssHost) {
 
     function sendVideoIdRequest() {
         webSocket.send(JSON.stringify({action: "get"}));
+    }
+
+    function sendDeleteCurrentVideoRequest() {
+        webSocket.send(JSON.stringify({
+            action: "delete",
+            movieId: this.currentVideo.movieId
+        }));
     }
 
     return {

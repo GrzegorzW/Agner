@@ -96,6 +96,7 @@ handle_text_message(Text) ->
 resolve_intent(Text) ->
   resolve_intent(Text, [
     {next, "^next$", []},
+    {delete, "^delete$", []},
     {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]}
   ]).
 
@@ -113,5 +114,7 @@ handle_intent({next, _Captured}) ->
   agner_player_server:next();
 handle_intent({volume, [Level]}) ->
   agner_player_server:volume(Level);
+handle_intent({delete, _Captured}) ->
+  agner_player_server:delete();
 handle_intent({nomatch, Text}) ->
   error_logger:info_msg("Nomatch. Text: ~s", [Text]).
