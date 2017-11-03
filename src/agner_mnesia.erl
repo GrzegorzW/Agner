@@ -56,6 +56,10 @@ delete_movie(MovieId) ->
   {atomic, ok} = mnesia:transaction(Fun).
 
 get_random_movie() ->
+
+  error_logger:info_msg("get_random_movie"),
+  mnesia:wait_for_tables([song], 1000),
+
   Keys = mnesia:dirty_all_keys(song),
   get_random_movie(Keys).
 

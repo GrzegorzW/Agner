@@ -2,27 +2,26 @@
 
 -export([start/0]).
 -export([start_link/0]).
--export([chat/1]).
+-export([connect_chat/0]).
 
 start() ->
-  spawn(?MODULE, chat, [false]).
+  spawn(?MODULE, connect_chat, []).
 
 start_link() ->
-  Pid = spawn_link(?MODULE, chat, [false]),
+  Pid = spawn_link(?MODULE, connect_chat, []),
   {ok, Pid}.
 
-chat(Connected) ->
-  if
-    Connected =:= false -> connect();
-    true -> ok
-  end,
+connect_chat() ->
+  {ok, ConnPid} = connect(),
+  chat(ConnPid).
 
+chat(ConnPid) ->
   receive
     {gun_ws, _ConnPid, Frame} ->
       handle_frame(Frame),
-      chat(true);
+      chat(ConnPid);
     {gun_ws_upgrade, _ConnPid, ok, _Headers} ->
-      chat(true);
+      chat(ConnPid);
     {gun_response, _ConnPid, _, _, Status, Headers} ->
       exit({ws_upgrade_failed, Status, Headers});
     {gun_error, _ConnPid, _StreamRef, Reason} ->
@@ -91,12 +90,16 @@ get_movie_title(#{<<"title">> := Title} = _Attachment) ->
 
 handle_text_message(Text) ->
   Intent = resolve_intent(Text),
+
+  error_logger:info_msg("Intent: ~s", [Intent]),
+
   handle_intent(Intent).
 
 resolve_intent(Text) ->
   resolve_intent(Text, [
     {next, "^next$", []},
     {delete, "^delete$", []},
+    {pause, "^pause", []},
     {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]}
   ]).
 
@@ -114,6 +117,8 @@ handle_intent({next, _Captured}) ->
   agner_player_server:next();
 handle_intent({volume, [Level]}) ->
   agner_player_server:volume(Level);
+handle_intent({pause, _Captured}) ->
+  agner_player_server:pause();
 handle_intent({delete, _Captured}) ->
   agner_player_server:delete();
 handle_intent({nomatch, Text}) ->

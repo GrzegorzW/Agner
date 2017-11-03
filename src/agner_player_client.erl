@@ -14,6 +14,9 @@ websocket_init(State) ->
 
 websocket_handle({text, Msg}, State) ->
   JsonRequest = jiffy:decode(Msg, [return_maps]),
+
+  error_logger:info_msg("Request: ~s", [JsonRequest]),
+
   case websocket_handle_message(JsonRequest) of
     {reply, Json} ->
       {reply, {text, Json}, State};
@@ -46,12 +49,15 @@ websocket_info({volume, Level}, State) ->
     <<"level">> => Level
   }),
   {reply, {text, Response}, State};
-websocket_info({get, MovieId, Source}, State) ->
+websocket_info({play, MovieId, Source}, State) ->
   Response = jiffy:encode(#{
     <<"action">> => <<"play">>,
     <<"movieId">> => list_to_binary(MovieId),
     <<"source">> => Source
   }),
+  {reply, {text, Response}, State};
+websocket_info(pause, State) ->
+  Response = jiffy:encode(#{<<"action">> => <<"pause">>}),
   {reply, {text, Response}, State};
 websocket_info(delete, State) ->
   Response = jiffy:encode(#{<<"action">> => <<"delete">>}),

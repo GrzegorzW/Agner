@@ -7,7 +7,7 @@
 
 obtain_wss_url() ->
   {ok, ConnPid} = gun:open(?SLACK_HOST, 443),
-  {ok, http2} = gun:await_up(ConnPid),
+  {ok, _Protocol} = gun:await_up(ConnPid),
   {ok, SlackToken} = application:get_env(slack_token),
 
   Url = erlang:iolist_to_binary([?SLACK_REST_URI, SlackToken]),
