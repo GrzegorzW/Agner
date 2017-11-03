@@ -5,6 +5,9 @@
 -export([subscribe/1, volume/1, next/0, add/3, get/0, delete/0, pause/0, delete/1]).
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
+-export([code_change/3]).
+-export([terminate/2]).
+
 -record(playlist_state, {queue, player_client, current_song}).
 
 start_link() ->
@@ -103,4 +106,12 @@ maybe_detach_client(ClientPid) when is_pid(ClientPid) ->
   ClientPid ! stop,
   ok;
 maybe_detach_client(undefined) ->
+  ok.
+
+
+
+code_change(_OldVsn, State, _Extra) ->
+  {ok, State}.
+
+terminate(_Reason, _State) ->
   ok.
