@@ -28,12 +28,15 @@ obtain_wss_url() ->
 
 receive_data(ConnPid, MRef, StreamRef) ->
   receive
-    {gun_data, ConnPid, StreamRef, nofin, Data} ->
+    {gun_data, ConnPid, StreamRef, _FinStatus, Data} ->
       ParsedJson = jiffy:decode(Data, [return_maps]),
       extract_url(ParsedJson);
     {'DOWN', MRef, process, ConnPid, Reason} ->
       error_logger:error_msg("Unable to obtain wss url"),
-      exit(Reason)
+      exit(Reason);
+    Else ->
+      error_logger:info_msg("receive_data received Else ~w", [Else])
+
   after 1000 ->
     exit(timeout)
   end.

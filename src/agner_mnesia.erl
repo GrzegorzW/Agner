@@ -57,7 +57,7 @@ delete_movie(MovieId) ->
 
 get_random_movie() ->
 
-  error_logger:info_msg("get_random_movie"),
+  error_logger:info_msg("mnesia:get_random_movie"),
   mnesia:wait_for_tables([song], 1000),
 
   Keys = mnesia:dirty_all_keys(song),

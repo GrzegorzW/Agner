@@ -1,11 +1,10 @@
 -module(agner_player_mpv_client).
 
--export([start/0, stop/0, start_link/0, init/0]).
+-export([start/0, stop/0, start_link/0, init/0, mpv_listen/1, start_player/1]).
 
-%%todo remove after tests
--export([play/1]).
+-define(MPV, agner_mpv_connected_process).
 
--define(PORT_NAME, agner_mpv_port).
+-record(player_state, {mpv_pid}).
 
 start() ->
   spawn(?MODULE, init, []).
@@ -21,93 +20,90 @@ init() ->
   process_flag(trap_exit, true),
   register(agner_mpv_client, self()),
   agner_player_server:subscribe(self()),
-  loop().
 
-loop() ->
-  error_logger:info_msg("loop"),
+  State = #player_state{_ = '_'},
 
+  loop(State).
+
+loop(State = #player_state{mpv_pid = CurrentMpvPid}) ->
   receive
-    end_of_movie ->
-      error_logger:info_msg("agner_player_mpv_client subscriber_added"),
-
-      agner_player_server:get(),
-      loop();
+    detach ->
+      stop_player(CurrentMpvPid);
     stop ->
-      stop_player();
+      stop_player(CurrentMpvPid);
     subscriber_added ->
-      error_logger:info_msg("agner_player_mpv_client subscriber_added"),
-
       agner_player_server:get(),
-      loop();
+      loop(State);
     next ->
-      error_logger:info_msg("agner_player_mpv_client next"),
-
       agner_player_server:get(),
-      loop();
+      loop(State);
     added_to_empty_queue ->
-      error_logger:info_msg("agner_player_mpv_client added_to_empty_queue"),
-
       agner_player_server:get(),
-      loop();
+      loop(State);
     {play, MovieId, _Source} ->
-      error_logger:info_msg("agner_player_mpv_client play: ~s", [MovieId]),
-
       Url = lists:concat(["https://www.youtube.com/watch?v=", MovieId]),
-      play(Url),
-      loop();
-    {error, Reason} ->
-      error_logger:info_msg("error: ~s", [Reason]),
-      loop();
-    {'EXIT', FromPid, Reason} ->
-      error_logger:info_msg("EXIT"),
-      erlang:display(FromPid),
-      erlang:display(Reason);
-    Else ->
-      error_logger:info_msg("else: ~s", [Else]),
-      loop()
+      stop_player(CurrentMpvPid),
+      MpvPid = spawn_link(?MODULE, start_player, [Url]),
+      NewState = State#player_state{mpv_pid = MpvPid},
+      loop(NewState);
+    {error, _Reason} ->
+      stop_player(CurrentMpvPid),
+      loop(State);
+    {'EXIT', _FromPid, Reason} ->
+      case Reason of
+        force_stop_player ->
+          agner_player_server:get(),
+          loop(State);
+        normal ->
+          agner_player_server:get(),
+          loop(State);
+        end_of_movie ->
+          agner_player_server:get(),
+          loop(State);
+        mpv_killed_remotely ->
+          stop_player(CurrentMpvPid);
+        {error, {status_code, StatusCode}} ->
+          stop_player(CurrentMpvPid),
+          exit(StatusCode)
+      end
   end.
 
-play(Url) ->
-  Command = lists:concat(["/usr/local/bin/mpv --no-video ", Url]),
+start_player(_Url) ->
+  Command = lists:concat(["tail -f /dev/null"]),
+%%  Command = lists:concat(["/usr/local/bin/mpv --no-video ", Url]),
   Port = open_port({spawn, Command}, [stream, in, exit_status]),
-  register(?PORT_NAME, Port),
-  listen(Port).
+  mpv_listen(Port).
 
-stop_player() ->
-  ?PORT_NAME ! stop.
+stop_player(MpvPid) when is_pid(MpvPid) ->
+  MpvPid ! stop;
+stop_player(_MpvPid) ->
+  ok.
 
-listen(Port) ->
+mpv_listen(Port) ->
   receive
-    {Port, {data, Data}} ->
-      erlang:display(Data),
-      listen(Port);
+    {Port, {data, _Data}} ->
+      mpv_listen(Port);
     stop ->
-      error_logger:info_msg("stop"),
-      Port ! {self(), close},
-      receive
-        {Port, closed} ->
-          error_logger:info_msg("stop -> closed"),
-
-          {os_pid, OsPid} = erlang:port_info(Port, os_pid),
-          os:cmd(io_lib:format("kill -9 ~p", [OsPid])),
-
-          unregister(?PORT_NAME),
-          exit(normal)
-      end;
+      kill_mpv(Port);
     {Port, {exit_status, StatusCode}} ->
-      Message = case StatusCode of
-                  0 ->
-                    end_of_movie;
-                  4 ->
-                    mpv_killed_remotely;
-                  _Else ->
-                    {error, {status_code, StatusCode}}
-                end,
-      error_logger:info_msg("agner_mpv_client ! ~s", [Message]),
-      agner_mpv_client ! Message,
-
-      exit(normal);
+      Reason = case StatusCode of
+                 0 ->
+                   end_of_movie;
+                 4 ->
+                   mpv_killed_remotely;
+                 _Else ->
+                   {error, {status_code, StatusCode}}
+               end,
+      exit(Reason);
+    {'EXIT', _FromPid, Reason} ->
+      kill_mpv(Port),
+      exit(Reason);
     Else ->
-      error_logger:info_msg("ELSE"),
-      error_logger:info_msg(Else)
+      error_logger:info_msg("mpv_listen ELSE: ~w", [Else])
   end.
+
+kill_mpv(Port) when is_port(Port) ->
+  {os_pid, OsPid} = erlang:port_info(Port, os_pid),
+  os:cmd(io_lib:format("kill -9 ~p", [OsPid])),
+  error_logger:info_msg("PID killed ~p", [OsPid]),
+  ok.

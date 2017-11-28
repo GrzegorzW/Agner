@@ -8,19 +8,19 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-  ChildSpecs = [
-%%    {
-%%    slack_chat,
-%%    {agner_slack_chat, start_link, []},
-%%    permanent, 5000, worker, [agner_slack_chat]
-%%  },
-    {
-      player_server,
-      {agner_player_server, start_link, []},
-      permanent, 5000, worker, [agner_player_server]
-    }, {
-      agner_mpv_client,
-      {agner_player_mpv_client, start_link, []},
-      transient, 5000, worker, [agner_player_mpv_client]
-    }],
-  {ok, {{one_for_one, 10, 60}, ChildSpecs}}.
+  ChildSpecs = [{
+    slack_chat,
+    {agner_slack_chat, start_link, []},
+    permanent, 5000, worker, [agner_slack_chat]
+  }, {
+    player_server,
+    {agner_player_server, start_link, []},
+    permanent, 5000, worker, [agner_player_server]
+  }
+%%    , {
+%%    agner_mpv_client,
+%%    {agner_player_mpv_client, start_link, []},
+%%    transient, 5000, worker, [agner_player_mpv_client]
+%%  }
+  ],
+  {ok, {{one_for_one, 5, 60}, ChildSpecs}}.

@@ -15,6 +15,18 @@ connect_chat() ->
   {ok, ConnPid} = connect(),
   chat(ConnPid).
 
+connect() ->
+  WssUrl = agner_slack_rest:obtain_wss_url(),
+  {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
+
+  {ok, ConnPid} = gun:open(Host, 443),
+  {ok, Protocol} = gun:await_up(ConnPid),
+
+  gun:ws_upgrade(ConnPid, Path),
+
+  error_logger:info_msg("Slack chat connected: ~p over ~w", [self(), Protocol]),
+  {ok, ConnPid}.
+
 chat(ConnPid) ->
   receive
     {gun_ws, _ConnPid, Frame} ->
@@ -23,22 +35,13 @@ chat(ConnPid) ->
     {gun_ws_upgrade, _ConnPid, ok, _Headers} ->
       chat(ConnPid);
     {gun_response, _ConnPid, _, _, Status, Headers} ->
+      erlang:display(<<"chat gun_response">>),
+
       exit({ws_upgrade_failed, Status, Headers});
     {gun_error, _ConnPid, _StreamRef, Reason} ->
+      erlang:display(<<"chat gun_error">>),
       exit({ws_upgrade_failed, Reason})
   end.
-
-connect() ->
-  WssUrl = agner_slack_rest:obtain_wss_url(),
-  {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
-
-  {ok, ConnPid} = gun:open(Host, 443),
-  {ok, http} = gun:await_up(ConnPid),
-  gun:ws_upgrade(ConnPid, Path),
-
-  error_logger:info_msg("Slack chat connected: ~p", [self()]),
-
-  {ok, ConnPid}.
 
 %%
 %%todo- handle reconnect_url
@@ -90,8 +93,7 @@ get_movie_title(#{<<"title">> := Title} = _Attachment) ->
 
 handle_text_message(Text) ->
   Intent = resolve_intent(Text),
-
-  error_logger:info_msg("Intent: ~s", [Intent]),
+  error_logger:info_msg("Resolved intent: ~w", [Intent]),
 
   handle_intent(Intent).
 

@@ -3,12 +3,11 @@
 -behavior(gen_server).
 
 -export([subscribe/1, volume/1, next/0, add/3, get/0, delete/0, pause/0, delete/1]).
--export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
-
--export([code_change/3]).
--export([terminate/2]).
+-export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, subscriber_checker_alive_loop/2]).
 
 -record(playlist_state, {queue, player_client, current_song}).
+
+-define(CHECKER_TIMEOUT, 2000).
 
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -92,26 +91,36 @@ handle_call({subscribe, NewClient}, _From, State = #playlist_state{player_client
   error_logger:info_msg("Client connected: ~p", [NewClient]),
   maybe_detach_client(CurrentClient),
   NewState = State#playlist_state{player_client = NewClient},
+  start_subscriber_alive_checker(NewClient),
   NewClient ! subscriber_added,
   {reply, ok, NewState};
 handle_call(terminate, _From, State) ->
   {stop, normal, ok, State}.
 
 handle_info(Msg, State) ->
-  io:format("Unexpected message: ~p~n", [Msg]),
-  erlang:display(State),
+  error_logger:warning_msg("Unexpected message: ~w~n", [Msg]),
   {noreply, State}.
 
 maybe_detach_client(ClientPid) when is_pid(ClientPid) ->
-  ClientPid ! stop,
+  ClientPid ! detach,
   ok;
 maybe_detach_client(undefined) ->
   ok.
 
-
-
-code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
-
-terminate(_Reason, _State) ->
+start_subscriber_alive_checker(ClientPid) when is_pid(ClientPid) ->
   ok.
+%%  Pid = spawn_link(?MODULE, subscriber_checker_alive_loop, [ClientPid, ?CHECKER_TIMEOUT]),
+%%  {ok, Pid}.
+
+subscriber_checker_alive_loop(Pid, Timeout) ->
+  receive
+  after Timeout ->
+    error_logger:warning_msg("subscriber_checker_alive_loop: ~p~n", [Pid]),
+    case erlang:process_info(Pid) of
+      undefined ->
+        {ok, NewPid} = agner_player_mpv_client:start_link(),
+        subscriber_checker_alive_loop(NewPid, Timeout);
+      _Else ->
+        subscriber_checker_alive_loop(Pid, Timeout)
+    end
+  end.
