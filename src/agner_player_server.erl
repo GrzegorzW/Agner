@@ -2,12 +2,12 @@
 
 -behavior(gen_server).
 
--export([subscribe/1, volume/1, next/0, add/3, get/0, delete/0, pause/0, delete/1]).
--export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, subscriber_checker_alive_loop/2]).
+-export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
+-export([subscribe/1, volume/1, next/0, add/3, get/0, delete/0, pause/0, delete/1, has_active_subscriber/0]).
 
 -record(playlist_state, {queue, player_client, current_song}).
 
--define(CHECKER_TIMEOUT, 2000).
+-define(CHECKER_TIMEOUT, 10000).
 
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -18,7 +18,7 @@ init([]) ->
   {ok, State}.
 
 subscribe(ClientPid) when is_pid(ClientPid) ->
-  gen_server:call(?MODULE, {subscribe, ClientPid}).
+  gen_server:cast(?MODULE, {subscribe, ClientPid}).
 
 volume(Level) ->
   gen_server:cast(?MODULE, {volume, Level}).
@@ -41,16 +41,19 @@ delete() ->
 delete(MovieId) ->
   gen_server:cast(?MODULE, {delete, MovieId}).
 
+has_active_subscriber() ->
+  gen_server:call(?MODULE, has_active_subscriber).
+
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
   error_logger:info_msg("~p ! volume ~p", [PlayerClient, Level]),
-
   PlayerClient ! {volume, Level},
   {noreply, State};
+
 handle_cast(next, State = #playlist_state{player_client = PlayerClient}) ->
   error_logger:info_msg("~p ! next", [PlayerClient]),
-
   PlayerClient ! next,
   {noreply, State};
+
 handle_cast({add, MovieId, Title, User}, State = #playlist_state{queue = Queue, player_client = PlayerClient}) ->
   agner_mnesia:add_movie(MovieId, Title, User),
   case queue:is_empty(Queue) of
@@ -59,9 +62,9 @@ handle_cast({add, MovieId, Title, User}, State = #playlist_state{queue = Queue, 
   end,
   NewState = State#playlist_state{queue = queue:in(MovieId, Queue)},
   {noreply, NewState};
+
 handle_cast(get, State = #playlist_state{queue = Queue, player_client = PlayerClient}) ->
   error_logger:info_msg("~p ! play", [PlayerClient]),
-
   NewState = case queue:is_empty(Queue) of
                true ->
                  {ok, MovieId} = agner_mnesia:get_random_movie(),
@@ -77,23 +80,29 @@ handle_cast(get, State = #playlist_state{queue = Queue, player_client = PlayerCl
 handle_cast(pause, State = #playlist_state{player_client = PlayerClient}) ->
   PlayerClient ! pause,
   {noreply, State};
+
 handle_cast(delete, State = #playlist_state{player_client = PlayerClient}) ->
   PlayerClient ! delete,
   {noreply, State};
+
 handle_cast({delete, MovieId}, State = #playlist_state{player_client = PlayerClient}) ->
   agner_mnesia:delete_movie(MovieId),
-
   PlayerClient ! {deleted, MovieId},
+  {noreply, State};
 
-  {noreply, State}.
-
-handle_call({subscribe, NewClient}, _From, State = #playlist_state{player_client = CurrentClient}) ->
+handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = CurrentClient}) ->
   error_logger:info_msg("Client connected: ~p", [NewClient]),
   maybe_detach_client(CurrentClient),
   NewState = State#playlist_state{player_client = NewClient},
-  start_subscriber_alive_checker(NewClient),
   NewClient ! subscriber_added,
-  {reply, ok, NewState};
+  {noreply, NewState}.
+
+handle_call(has_active_subscriber, _From, State = #playlist_state{player_client = undefined}) ->
+  {reply, false, State};
+
+handle_call(has_active_subscriber, _From, State) ->
+  {reply, true, State};
+
 handle_call(terminate, _From, State) ->
   {stop, normal, ok, State}.
 
@@ -106,21 +115,3 @@ maybe_detach_client(ClientPid) when is_pid(ClientPid) ->
   ok;
 maybe_detach_client(undefined) ->
   ok.
-
-start_subscriber_alive_checker(ClientPid) when is_pid(ClientPid) ->
-  ok.
-%%  Pid = spawn_link(?MODULE, subscriber_checker_alive_loop, [ClientPid, ?CHECKER_TIMEOUT]),
-%%  {ok, Pid}.
-
-subscriber_checker_alive_loop(Pid, Timeout) ->
-  receive
-  after Timeout ->
-    error_logger:warning_msg("subscriber_checker_alive_loop: ~p~n", [Pid]),
-    case erlang:process_info(Pid) of
-      undefined ->
-        {ok, NewPid} = agner_player_mpv_client:start_link(),
-        subscriber_checker_alive_loop(NewPid, Timeout);
-      _Else ->
-        subscriber_checker_alive_loop(Pid, Timeout)
-    end
-  end.
