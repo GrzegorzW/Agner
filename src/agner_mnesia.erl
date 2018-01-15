@@ -1,6 +1,6 @@
 -module(agner_mnesia).
 
--export([start/0, add_movie/3, get_random_movie/0]).
+-export([start/0, add_movie/3, get_random_movie/0, delete_movie/1]).
 
 -include("agner_playlist.hrl").
 
@@ -47,7 +47,19 @@ add_movie(MovieId, Title, AuthorId) ->
         end,
   {atomic, ok} = mnesia:transaction(Fun).
 
+delete_movie(MovieId) ->
+  mnesia:wait_for_tables([song], 1000),
+
+  Fun = fun() ->
+    mnesia:delete({song, MovieId})
+        end,
+  {atomic, ok} = mnesia:transaction(Fun).
+
 get_random_movie() ->
+
+  error_logger:info_msg("mnesia:get_random_movie"),
+  mnesia:wait_for_tables([song], 1000),
+
   Keys = mnesia:dirty_all_keys(song),
   get_random_movie(Keys).
 

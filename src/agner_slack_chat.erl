@@ -2,44 +2,46 @@
 
 -export([start/0]).
 -export([start_link/0]).
--export([chat/1]).
+-export([connect_chat/0]).
 
 start() ->
-  spawn(?MODULE, chat, [false]).
+  spawn(?MODULE, connect_chat, []).
 
 start_link() ->
-  Pid = spawn_link(?MODULE, chat, [false]),
+  Pid = spawn_link(?MODULE, connect_chat, []),
   {ok, Pid}.
 
-chat(Connected) ->
-  if
-    Connected =:= false -> connect();
-    true -> ok
-  end,
-
-  receive
-    {gun_ws, _ConnPid, Frame} ->
-      handle_frame(Frame),
-      chat(true);
-    {gun_ws_upgrade, _ConnPid, ok, _Headers} ->
-      chat(true);
-    {gun_response, _ConnPid, _, _, Status, Headers} ->
-      exit({ws_upgrade_failed, Status, Headers});
-    {gun_error, _ConnPid, _StreamRef, Reason} ->
-      exit({ws_upgrade_failed, Reason})
-  end.
+connect_chat() ->
+  {ok, ConnPid} = connect(),
+  chat(ConnPid).
 
 connect() ->
   WssUrl = agner_slack_rest:obtain_wss_url(),
   {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
 
   {ok, ConnPid} = gun:open(Host, 443),
-  {ok, http} = gun:await_up(ConnPid),
+  {ok, Protocol} = gun:await_up(ConnPid),
+
   gun:ws_upgrade(ConnPid, Path),
 
-  error_logger:info_msg("Slack chat connected: ~p", [self()]),
-
+  error_logger:info_msg("Slack chat connected: ~p over ~w", [self(), Protocol]),
   {ok, ConnPid}.
+
+chat(ConnPid) ->
+  receive
+    {gun_ws, _ConnPid, Frame} ->
+      handle_frame(Frame),
+      chat(ConnPid);
+    {gun_ws_upgrade, _ConnPid, ok, _Headers} ->
+      chat(ConnPid);
+    {gun_response, _ConnPid, _, _, Status, Headers} ->
+      erlang:display(<<"chat gun_response">>),
+
+      exit({ws_upgrade_failed, Status, Headers});
+    {gun_error, _ConnPid, _StreamRef, Reason} ->
+      erlang:display(<<"chat gun_error">>),
+      exit({ws_upgrade_failed, Reason})
+  end.
 
 %%
 %%todo- handle reconnect_url
@@ -91,11 +93,15 @@ get_movie_title(#{<<"title">> := Title} = _Attachment) ->
 
 handle_text_message(Text) ->
   Intent = resolve_intent(Text),
+  error_logger:info_msg("Resolved intent: ~w", [Intent]),
+
   handle_intent(Intent).
 
 resolve_intent(Text) ->
   resolve_intent(Text, [
     {next, "^next$", []},
+    {delete, "^delete$", []},
+    {pause, "^pause", []},
     {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]}
   ]).
 
@@ -113,5 +119,9 @@ handle_intent({next, _Captured}) ->
   agner_player_server:next();
 handle_intent({volume, [Level]}) ->
   agner_player_server:volume(Level);
+handle_intent({pause, _Captured}) ->
+  agner_player_server:pause();
+handle_intent({delete, _Captured}) ->
+  agner_player_server:delete();
 handle_intent({nomatch, Text}) ->
   error_logger:info_msg("Nomatch. Text: ~s", [Text]).

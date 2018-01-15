@@ -16,5 +16,9 @@ init([]) ->
     player_server,
     {agner_player_server, start_link, []},
     permanent, 5000, worker, [agner_player_server]
+  }, {
+    agner_mpv_client,
+    {agner_player_mpv_client, start_link, []},
+    transient, 5000, worker, [agner_player_mpv_client]
   }],
   {ok, {{one_for_one, 5, 60}, ChildSpecs}}.

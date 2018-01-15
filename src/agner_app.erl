@@ -5,6 +5,9 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+
+  debugger:start(),
+
   ok = error_logger:logfile({open, "agner.log"}),
   Dispatch = cowboy_router:compile([
     {'_', [
@@ -15,8 +18,8 @@ start(_Type, _Args) ->
   ]),
   {ok, _} = cowboy:start_clear(http, [{port, 7777}], #{env => #{dispatch => Dispatch}}),
 
-  agner_mnesia:start(),
 
+  agner_mnesia:start(),
   agner_sup:start_link().
 
 stop(_State) ->

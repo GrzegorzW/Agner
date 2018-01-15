@@ -7,7 +7,7 @@
 
 obtain_wss_url() ->
   {ok, ConnPid} = gun:open(?SLACK_HOST, 443),
-  {ok, http2} = gun:await_up(ConnPid),
+  {ok, _Protocol} = gun:await_up(ConnPid),
   {ok, SlackToken} = application:get_env(slack_token),
 
   Url = erlang:iolist_to_binary([?SLACK_REST_URI, SlackToken]),
@@ -28,12 +28,15 @@ obtain_wss_url() ->
 
 receive_data(ConnPid, MRef, StreamRef) ->
   receive
-    {gun_data, ConnPid, StreamRef, nofin, Data} ->
+    {gun_data, ConnPid, StreamRef, _FinStatus, Data} ->
       ParsedJson = jiffy:decode(Data, [return_maps]),
       extract_url(ParsedJson);
     {'DOWN', MRef, process, ConnPid, Reason} ->
       error_logger:error_msg("Unable to obtain wss url"),
-      exit(Reason)
+      exit(Reason);
+    Else ->
+      error_logger:info_msg("receive_data received Else ~w", [Else])
+
   after 1000 ->
     exit(timeout)
   end.
