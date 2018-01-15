@@ -72,7 +72,7 @@ loop(State = #player_state{mpv_pid = CurrentMpvPid, current_movie_id = CurrentMo
   end.
 
 start_player(Url) ->
-  Command = lists:concat(["/usr/local/bin/mpv --no-video --no-terminal ", Url]),
+  Command = lists:concat(["mpv --no-video --no-terminal ", Url]),
   Port = open_port({spawn, Command}, [stream, in, exit_status]),
   mpv_listen(Port).
 
