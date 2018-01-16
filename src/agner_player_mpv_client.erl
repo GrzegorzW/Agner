@@ -111,7 +111,9 @@ kill_mpv(Port) when is_port(Port) ->
   error_logger:info_msg("mpv killed (PID: ~p)", [OsPid]),
   ok.
 
-set_volume(Level) ->
+set_volume(Level) when is_list(Level) ->
+  set_volume(list_to_integer(Level));
+set_volume(Level) when is_integer(Level) ->
   {ok, AudioDevice} = application:get_env(audio_device),
   Command = lists:concat(["amixer sset ", AudioDevice, " ", Level, "%"]),
   os:cmd(Command).
