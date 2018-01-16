@@ -41,6 +41,9 @@ loop(State = #player_state{mpv_pid = CurrentMpvPid, current_movie_id = CurrentMo
     {deleted, _MovieId} ->
       agner_player_server:get(),
       loop(State);
+    {volume, Level} ->
+      set_volume(Level),
+      loop(State);
     added_to_empty_queue ->
       agner_player_server:get(),
       loop(State);
@@ -107,3 +110,8 @@ kill_mpv(Port) when is_port(Port) ->
   os:cmd(io_lib:format("kill -9 ~p", [OsPid])),
   error_logger:info_msg("mpv killed (PID: ~p)", [OsPid]),
   ok.
+
+set_volume(Level) ->
+  {ok, AudioDevice} = application:get_env(audio_device),
+  Command = lists:concat(["amixer sset ", AudioDevice, " ", Level, "%"]),
+  os:cmd(Command).
