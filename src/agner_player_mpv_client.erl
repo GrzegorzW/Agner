@@ -4,7 +4,7 @@
 
 -define(MPV, agner_mpv_connected_process).
 
--record(player_state, {mpv_pid, current_movie_id}).
+-record(player_state, {mpv_pid, current_movie_id, current_movie_source}).
 
 start() ->
   spawn(?MODULE, init, []).
@@ -26,7 +26,12 @@ init() ->
 
   loop(State).
 
-loop(State = #player_state{mpv_pid = CurrentMpvPid, current_movie_id = CurrentMovieId}) ->
+loop(
+    State = #player_state{
+      mpv_pid = CurrentMpvPid,
+      current_movie_id = CurrentMovieId,
+      current_movie_source = Source}
+) ->
   receive
     detach ->
       stop_player(CurrentMpvPid);
@@ -44,20 +49,20 @@ loop(State = #player_state{mpv_pid = CurrentMpvPid, current_movie_id = CurrentMo
     {volume, Level} ->
       set_volume(Level),
       loop(State);
-    added_to_empty_queue ->
+    added_to_empty_queue when Source =:= random ->
       agner_player_server:get(),
       loop(State);
-    {play, NewMovieId, _Source} ->
+    {play, NewMovieId, Source} ->
       Url = lists:concat(["https://www.youtube.com/watch?v=", NewMovieId]),
       stop_player(CurrentMpvPid),
       MpvPid = spawn_link(?MODULE, start_player, [Url]),
-      NewState = State#player_state{mpv_pid = MpvPid, current_movie_id = NewMovieId},
+      NewState = State#player_state{mpv_pid = MpvPid, current_movie_id = NewMovieId, current_movie_source = Source},
       loop(NewState);
     delete ->
       agner_player_server:delete(CurrentMovieId),
       loop(State);
     {'EXIT', _FromPid, Reason} ->
-      error_logger:info_msg("loop 'EXIT' reason: ~w", [Reason]),
+      error_logger:info_msg("mpv loop 'EXIT' reason: ~w", [Reason]),
       case Reason of
         normal ->
           loop(State);
@@ -71,11 +76,16 @@ loop(State = #player_state{mpv_pid = CurrentMpvPid, current_movie_id = CurrentMo
           exit(Error);
         Else ->
           error_logger:info_msg("Not handled 'EXIT' case clause: ~w", [Else])
-      end
+      end;
+    Else ->
+      erlang:display(?MODULE),
+      erlang:display(?FUNCTION_NAME),
+      erlang:display(Else),
+      loop(State)
   end.
 
 start_player(Url) ->
-  Command = lists:concat(["mpv --no-video --no-terminal ", Url]),
+  Command = lists:concat(["mpv --no-video --no-terminal --cache=no --osc=no ", Url]),
   Port = open_port({spawn, Command}, [stream, in, exit_status]),
   mpv_listen(Port).
 
