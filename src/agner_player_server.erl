@@ -55,7 +55,7 @@ handle_cast(next, State = #playlist_state{player_client = PlayerClient}) ->
   {noreply, State};
 
 handle_cast({add, MovieId, Title, User}, State = #playlist_state{queue = Queue, player_client = PlayerClient}) ->
-  agner_mnesia:add_movie(MovieId, Title, User),
+  agner_playlist:add(MovieId, Title, User),
   case queue:is_empty(Queue) of
     true -> PlayerClient ! added_to_empty_queue;
     false -> ok
@@ -67,7 +67,7 @@ handle_cast(get, State = #playlist_state{queue = Queue, player_client = PlayerCl
   error_logger:info_msg("~p ! play", [PlayerClient]),
   NewState = case queue:is_empty(Queue) of
                true ->
-                 {ok, MovieId} = agner_mnesia:get_random_movie(),
+                 {ok, MovieId} = agner_playlist:get(),
                  PlayerClient ! {play, MovieId, random},
                  State;
                false ->
@@ -86,7 +86,7 @@ handle_cast(delete, State = #playlist_state{player_client = PlayerClient}) ->
   {noreply, State};
 
 handle_cast({delete, MovieId}, State = #playlist_state{player_client = PlayerClient}) ->
-  agner_mnesia:delete_movie(MovieId),
+  agner_playlist:delete(MovieId),
   PlayerClient ! {deleted, MovieId},
   {noreply, State};
 
