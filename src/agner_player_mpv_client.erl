@@ -30,7 +30,7 @@ loop(
     State = #player_state{
       mpv_pid = CurrentMpvPid,
       current_movie_id = CurrentMovieId,
-      current_movie_source = Source}
+      current_movie_source = CurrentSource}
 ) ->
   receive
     detach ->
@@ -49,7 +49,7 @@ loop(
     {volume, Level} ->
       set_volume(Level),
       loop(State);
-    added_to_empty_queue when Source =:= random ->
+    added_to_empty_queue when CurrentSource =:= random ->
       agner_player_server:get(),
       loop(State);
     {play, NewMovieId, Source} ->
@@ -79,7 +79,7 @@ loop(
       end;
     Else ->
       erlang:display(?MODULE),
-      erlang:display(?FUNCTION_NAME),
+      erlang:display(<<"ELSE">>),
       erlang:display(Else),
       loop(State)
   end.
