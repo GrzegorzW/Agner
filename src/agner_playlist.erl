@@ -81,7 +81,7 @@ handle_cast({delete, MovieId}, RecentMovies) ->
 
 handle_call({get_random}, _From, RecentMovies) ->
   RandomMovieId = randomize(RecentMovies),
-  NewState = lists:append([{RandomMovieId, os:system_time() + calculate_ttl(length(RecentMovies))}], RecentMovies),
+  NewState = lists:append([{RandomMovieId, calculate_ttl()}], RecentMovies),
   {reply, {ok, RandomMovieId}, NewState}.
 
 randomize(RecentMovies) ->
@@ -103,8 +103,8 @@ expire_items([{Item, ExpiresAt} | Tail], Result) ->
               end,
   expire_items(Tail, NewResult).
 
-calculate_ttl(ItemsCount) when is_integer(ItemsCount) ->
-  ItemsCount * 120 * 1000.
+calculate_ttl() ->
+  os:system_time() + get_songs_count() * 120 * 1000.
 
 get_random_movie() ->
   error_logger:info_msg("mnesia:get_random_movie"),
@@ -119,6 +119,9 @@ get_random_movie(Keys) ->
   Key = lists:nth(rand:uniform(length(Keys)), Keys),
   [#song{movie_id = MovieId}] = mnesia:dirty_read({song, Key}),
   {ok, MovieId}.
+
+get_songs_count() ->
+  length(mnesia:dirty_all_keys(song)).
 
 handle_info(start_expiring_timer, RecentMovies) ->
   spawn_gc(),
