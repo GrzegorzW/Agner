@@ -9,8 +9,8 @@ PlayerClient = function (wssHost) {
         print('<span style="color: green;">INIT PLAYER </span>');
 
         player = new YT.Player('player', {
-            height: '0',
-            width: '0',
+            height: '768',
+            width: '1024',
             events: {
                 'onReady': onPlayerReady,
                 'onStateChange': onPlayerStateChange

@@ -13,45 +13,57 @@ start_link() ->
 
 connect_chat() ->
   {ok, ConnPid} = connect(),
-  chat(ConnPid).
+  upgrade(ConnPid).
 
 connect() ->
   WssUrl = agner_slack_rest:obtain_wss_url(),
   {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
 
   {ok, ConnPid} = gun:open(Host, 443),
-  {ok, Protocol} = gun:await_up(ConnPid),
+  {ok, http} = gun:await_up(ConnPid),
 
   gun:ws_upgrade(ConnPid, Path),
 
-  error_logger:info_msg("Slack chat connected: ~p over ~w", [self(), Protocol]),
   {ok, ConnPid}.
+
+upgrade(ConnPid) ->
+  receive
+    {gun_upgrade, ConnPid, _StreamRef, _Protocols, _Headers} ->
+      erlang:display(<<"chat upgrade success">>),
+      chat(ConnPid);
+    {gun_response, ConnPid, _, _, Status, Headers} ->
+      erlang:display(<<"chat gun_response">>),
+      exit({ws_upgrade_failed, Status, Headers});
+    {gun_error, ConnPid, _StreamRef, Reason} ->
+      erlang:display(<<"chat gun_error">>),
+      exit({ws_upgrade_failed, Reason});
+    Else ->
+      erlang:display(upgrade_message_else),
+      erlang:display(Else),
+      upgrade(ConnPid)
+  after 5000 ->
+    exit(slack_websocket_timeout)
+  end.
 
 chat(ConnPid) ->
   receive
-    {gun_ws, _ConnPid, Frame} ->
-      handle_frame(Frame),
+    {gun_ws, ConnPid, _StreamRef, {text, Body}} ->
+      handle_frame(Body),
       chat(ConnPid);
-    {gun_ws_upgrade, _ConnPid, ok, _Headers} ->
-      chat(ConnPid);
-    {gun_response, _ConnPid, _, _, Status, Headers} ->
-      erlang:display(<<"chat gun_response">>),
-
-      exit({ws_upgrade_failed, Status, Headers});
-    {gun_error, _ConnPid, _StreamRef, Reason} ->
-      erlang:display(<<"chat gun_error">>),
-      exit({ws_upgrade_failed, Reason})
+    {gun_down, ConnPid, _Protocol, Reason, _, _} ->
+      exit({chat_connection_down, Reason});
+    Else ->
+      erlang:display(chat_message_else),
+      erlang:display(Else),
+      chat(ConnPid)
   end.
 
-%%
-%%todo- handle reconnect_url
-%%
-handle_frame({text, Body}) ->
+handle_frame(Body) ->
   ParsedJson = jiffy:decode(Body, [return_maps]),
   handle_parsed_frame(ParsedJson).
 
-handle_parsed_frame(#{<<"type">> := <<"message">>} = ParsedJson) ->
-  handle_message(ParsedJson);
+handle_parsed_frame(#{<<"type">> := <<"message">>} = Message) ->
+  handle_message(Message);
 handle_parsed_frame(#{<<"type">> := Type} = _ParsedJson) ->
   {unsupported_type, Type}.
 
