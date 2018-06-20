@@ -11,7 +11,6 @@ websocket_init(State) ->
 
 websocket_handle({text, Msg}, State) ->
   JsonRequest = jiffy:decode(Msg, [return_maps]),
-  error_logger:info_msg("Request: ~s", [JsonRequest]),
   case websocket_handle_message(JsonRequest) of
     {reply, Json} ->
       {reply, {text, Json}, State};
