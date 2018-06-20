@@ -119,6 +119,7 @@ PlayerClient = function (wssHost) {
 
         if (event.data === YT.PlayerState.PLAYING) {
             print('<span style="color: green;">VIDEO URL: ' + player.getVideoUrl() + '</span>');
+            setVideoTitle(player.getVideoData().title);
         }
     }
 
@@ -200,6 +201,11 @@ PlayerClient = function (wssHost) {
         }
 
         parent.insertBefore(node, parent.firstChild);
+    }
+
+    function setVideoTitle(title) {
+        var titleElement = document.getElementById("title");
+        titleElement.innerHTML = title;
     }
 
     return {
