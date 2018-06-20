@@ -50,8 +50,8 @@ chat(ConnPid) ->
     {gun_ws, ConnPid, _StreamRef, {text, Body}} ->
       handle_frame(Body),
       chat(ConnPid);
-    {gun_down, ConnPid, _Protocol, Reason, _, _} ->
-      exit({chat_connection_down, Reason});
+    {gun_down, Pid, _Protocol, Reason, _, _} ->
+      exit({chat_connection_down, [{pid, Pid}, {reason, Reason}, {connPid, ConnPid}]});
     Else ->
       erlang:display(chat_message_else),
       erlang:display(Else),

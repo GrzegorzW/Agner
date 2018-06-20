@@ -36,7 +36,6 @@ receive_data(ConnPid, MRef, StreamRef) ->
       exit(Reason);
     Else ->
       error_logger:info_msg("receive_data received Else ~w", [Else])
-
   after 1000 ->
     exit(timeout)
   end.
