@@ -94,9 +94,13 @@ handle_attachments(_UserId, []) ->
 get_movie_id(#{<<"from_url">> := MovieUrl} = _Attachment) ->
   extract_movie_id(MovieUrl).
 
-extract_movie_id(MovieUrl) ->
+extract_movie_id(MovieUrl) when is_binary(MovieUrl) ->
   Decoded = cow_qs:urldecode(MovieUrl),
-  {_Scheme, _Host, _Path, Query, _Fragment} = mochiweb_util:urlsplit(binary_to_list(Decoded)),
+  extract_movie_id(mochiweb_util:urlsplit(erlang:binary_to_list(Decoded)));
+
+extract_movie_id({_Scheme, "youtu.be", [_Slash | MovieId], _Query, _Fragment}) ->
+  MovieId;
+extract_movie_id({_Scheme, _Host, _Path, Query, _Fragment}) ->
   [MovieId] = [V || {"v", V} <- mochiweb_util:parse_qs(Query)],
   MovieId.
 
