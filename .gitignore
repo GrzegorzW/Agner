@@ -3,3 +3,4 @@ _rel
 deps
 ebin
 rel/extra.config
+docker-compose.yml
