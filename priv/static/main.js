@@ -11,23 +11,20 @@ PlayerClient = function (wssHost) {
         player = new YT.Player('player', {
             height: '600',
             width: '800',
-            videoId: '8U0CvLV4Bsk',
             events: {
-                'onReady': onPlayerReady
-                // 'onStateChange': onPlayerStateChange
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
     }
 
-    function onPlayerReady(event) {
-            event.target.playVideo();
+    function onPlayerReady() {
+        setVolume(50);
+        setQuality("small");
 
-        // setVolume(50);
-        // setQuality("small");
-        //
-        // keepAliveInterval = setInterval(keepAlive, timeout);
-        //
-        // connect();
+        keepAliveInterval = setInterval(keepAlive, timeout);
+
+        connect();
     }
 
     function connect() {
