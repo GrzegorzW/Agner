@@ -28,7 +28,7 @@
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
     function onYouTubeIframeAPIReady() {
-        var wsHost = "ws://" + window.location.host + "/player";
+        var wsHost = "wss://" + window.location.host + "/player";
         var wsClient = new PlayerClient(wsHost);
 
         wsClient.init();
