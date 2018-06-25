@@ -13,10 +13,16 @@ start_link() ->
 
 connect_chat() ->
   {ok, ConnPid} = connect(),
+
+  MRef = monitor(process, ConnPid),
+
+  erlang:display(monitor_ref),
+  erlang:display(MRef),
+
   upgrade(ConnPid).
 
 connect() ->
-  WssUrl = agner_slack_rest:obtain_wss_url(),
+  {ok, WssUrl} = agner_slack_rest:obtain_wss_url(),
   {_Scheme, Host, Path, _Query, _Fragment} = mochiweb_util:urlsplit(WssUrl),
 
   {ok, ConnPid} = gun:open(Host, 443),

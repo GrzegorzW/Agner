@@ -41,7 +41,7 @@ receive_data(ConnPid, MRef, StreamRef) ->
   end.
 
 extract_url(#{<<"ok">> := true, <<"url">> := Url} = _ParsedJson) ->
-  binary_to_list(Url);
+  {ok, binary_to_list(Url)};
 extract_url(#{<<"error">> := Error} = _ParsedJson) ->
   exit({error, Error});
 extract_url(ParsedJson) ->
