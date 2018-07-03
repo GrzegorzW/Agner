@@ -208,7 +208,12 @@ PlayerClient = function (wssHost) {
         titleElement.innerHTML = title;
     }
 
+    function reconnectSlack() {
+        webSocket.send(JSON.stringify({action: "reconnect_slack"}));
+    }
+
     return {
-        'init': init
+        'init': init,
+        'reconnectSlack': reconnectSlack
     }
 };

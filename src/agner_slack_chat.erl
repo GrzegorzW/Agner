@@ -36,6 +36,7 @@ upgrade(ConnPid) ->
   receive
     {gun_upgrade, ConnPid, _StreamRef, _Protocols, _Headers} ->
       erlang:display(<<"chat upgrade success">>),
+      agner_player_server:chat_connected(self()),
       chat(ConnPid);
     {gun_response, ConnPid, _, _, Status, Headers} ->
       erlang:display(<<"chat gun_response">>),
@@ -58,6 +59,9 @@ chat(ConnPid) ->
       chat(ConnPid);
     {gun_down, Pid, _Protocol, Reason, _, _} ->
       exit({chat_connection_down, [{pid, Pid}, {reason, Reason}, {connPid, ConnPid}]});
+    {shutdown, _Pid} ->
+      erlang:display(<<"closing_slack_connection">>),
+      gun:close(ConnPid);
     Else ->
       erlang:display(chat_message_else),
       erlang:display(Else),

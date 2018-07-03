@@ -3,9 +3,21 @@
 -behavior(gen_server).
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([subscribe/1, volume/1, next/0, add/3, get/0, delete/0, pause/0, delete/1, has_active_subscriber/0]).
+-export([
+  subscribe/1,
+  volume/1,
+  next/0,
+  add/3,
+  get/0,
+  delete/0,
+  pause/0,
+  delete/1,
+  has_active_subscriber/0,
+  reconnect_slack/0,
+  chat_connected/1
+]).
 
--record(playlist_state, {queue, player_client, current_song}).
+-record(playlist_state, {queue, player_client, current_song, chat}).
 
 -define(CHECKER_TIMEOUT, 10000).
 
@@ -40,6 +52,12 @@ delete() ->
 
 delete(MovieId) ->
   gen_server:cast(?MODULE, {delete, MovieId}).
+
+chat_connected(Pid) ->
+  gen_server:cast(?MODULE, {chat_connected, Pid}).
+
+reconnect_slack() ->
+  gen_server:cast(?MODULE, reconnect_slack).
 
 has_active_subscriber() ->
   gen_server:call(?MODULE, has_active_subscriber).
@@ -88,6 +106,13 @@ handle_cast(delete, State = #playlist_state{player_client = PlayerClient}) ->
 handle_cast({delete, MovieId}, State = #playlist_state{player_client = PlayerClient}) ->
   agner_playlist:delete(MovieId),
   PlayerClient ! {deleted, MovieId},
+  {noreply, State};
+
+handle_cast({chat_connected, Pid}, State) ->
+  {noreply, State#playlist_state{chat = Pid}};
+
+handle_cast(reconnect_slack, State = #playlist_state{chat = Pid}) when is_pid(Pid) ->
+  Pid ! {shutdown, self()},
   {noreply, State};
 
 handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = CurrentClient}) ->

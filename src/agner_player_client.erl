@@ -29,6 +29,10 @@ websocket_handle_message(#{<<"action">> := <<"delete">>, <<"movieId">> := MovieI
   ok = agner_player_server:delete(binary_to_list(MovieId)),
   noreply;
 
+websocket_handle_message(#{<<"action">> := <<"reconnect_slack">>} = _ParsedJson) ->
+  ok = agner_player_server:reconnect_slack(),
+  noreply;
+
 websocket_handle_message(_ParsedJson) ->
   {reply, jiffy:encode(#{<<"action">> => <<"error">>, <<"reason">> => <<"unsupported_action">>})}.
 

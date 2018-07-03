@@ -10,6 +10,7 @@
 <h1 id="title"></h1>
 <div id="player"></div>
 <div id="content">
+    <input type="button" onclick="reconnectSlack()" value="reconnect slack">
     <p>
         Communication:
     </p>
@@ -21,6 +22,7 @@
 <script type="text/javascript">
     var tag;
     var firstScriptTag;
+    var wsClient;
 
     tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
@@ -28,10 +30,15 @@
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
     function onYouTubeIframeAPIReady() {
-        var wsHost = "wss://" + window.location.host + "/player";
-        var wsClient = new PlayerClient(wsHost);
+        var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        var wsHost = scheme + "://" + window.location.host + "/player";
+        wsClient = new PlayerClient(wsHost);
 
         wsClient.init();
+    }
+
+    function reconnectSlack() {
+        wsClient.reconnectSlack();
     }
 </script>
 </html>
