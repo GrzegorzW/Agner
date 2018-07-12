@@ -4,6 +4,58 @@
     <title>Agner Player</title>
     <script src="/static/main.js"></script>
 
+    <style>
+      html {
+        font-family: Courier;
+      }
+
+      #player {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #output {
+        position: fixed;
+        top: 67px;
+        right: 0;
+        width: 33%;
+        z-index: 3;
+        background: rgba(255, 255, 255, 0.56);
+        padding: 30px;
+        overflow: scroll;
+        height: calc(100% - 134px);
+        font-family: Courier;
+        font-size: 11px;
+        max-width: 400px;
+        box-sizing: border-box;
+      }
+
+      #output p {
+        font-family: Courier;
+        font-size: 11px;
+      }
+
+      input[type="button"] {
+        position: fixed;
+        bottom: 10px;
+        z-index: 5;
+        width: 200px;
+        height: 45px;
+        background: #1a5df3;
+        right: 10px;
+        color: black;
+        font-family: Courier;
+        border: none;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        width: 33%;
+        max-width: 377px;
+      }
+    </style>
 </head>
 
 <body>
