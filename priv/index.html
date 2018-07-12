@@ -9,6 +9,19 @@
         font-family: Courier;
       }
 
+      #title {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 5;
+        color: white;
+        background: black;
+        margin: 0;
+        padding: 15px;
+        text-align: center;
+      }
+
       #player {
         position: fixed;
         top: 0;
@@ -39,13 +52,14 @@
       }
 
       input[type="button"] {
+        outline: none;
         position: fixed;
-        bottom: 10px;
+        bottom: 0px;
         z-index: 5;
         width: 200px;
-        height: 45px;
+        height: 67px;
         background: #1a5df3;
-        right: 10px;
+        right: 0;
         color: black;
         font-family: Courier;
         border: none;
@@ -53,8 +67,52 @@
         font-weight: 700;
         text-transform: uppercase;
         width: 33%;
-        max-width: 377px;
+        max-width: 400px;
+        font-size: 20px;
       }
+
+      #close {
+        display: none;
+      }
+
+      label {
+        top: 32px;
+        right: 23px;
+        width: 40px;
+        height: 3px;
+        background: white;
+        padding: 0;
+        cursor: pointer;
+        position: fixed;
+        z-index: 5;
+      }
+
+      label::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 3px;
+        top: -10px;
+        position: absolute;
+        padding-bottom: 20px;
+        border-top: 3px solid white;
+      }
+
+      label::after {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 3px;
+        background: white;
+        bottom: -10px;
+        position: absolute;
+      }
+
+      #close:checked ~ #output,
+      #close:checked ~ input[type="button"] {
+        display: none;
+      }
+
     </style>
 </head>
 
@@ -62,6 +120,8 @@
 <h1 id="title"></h1>
 <div id="player"></div>
 <div id="content">
+    <input type="checkbox" name="close" id="close">
+    <label for="close">X</label>
     <input type="button" onclick="reconnectSlack()" value="reconnect slack">
     <p>
         Communication:
