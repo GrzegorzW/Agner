@@ -78,6 +78,9 @@ PlayerClient = function (wssHost) {
             case "volume":
                 setVolume(msg.level);
                 break;
+            case "seek":
+                seek(msg.to);
+                break;
             case "pause":
                 clientPaused = true;
                 pauseVideo();
@@ -136,6 +139,11 @@ PlayerClient = function (wssHost) {
     function setVolume(volume) {
         player.setVolume(volume);
         print('<span style="color: green;">CURRENT VOLUME: ' + volume + '</span>');
+    }
+
+    function seek(to) {
+        player.seekTo(to);
+        print('<span style="color: green;">SEEK TO: ' + to + '</span>');
     }
 
     function setQuality(quality) {
