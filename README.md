@@ -27,6 +27,14 @@ In order to run server execute command:
 make run
 ```
 
+or 
+
+```
+cp docker-compose.yml.dist docker-compose.yml
+
+docker-compose up -d
+```
+
 To add movie, send YouTube url to Your bot using Slack.
 
 In order to play songs visit [localhost:7777](localhost:7777)
@@ -46,6 +54,14 @@ next
 volume 0-100
 ```
 
+```
+delete
+```
+
+```
+seek <int>
+```
+
 ## Built With
 
 * [Erlang](http://erlang.org/doc/index.html)
@@ -57,7 +73,5 @@ MIT - [read license](LICENSE)
 
 ## Todo
 
-* delete song
-* seek to
 * print queue
 * print current
