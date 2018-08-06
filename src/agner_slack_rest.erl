@@ -36,13 +36,12 @@ receive_data(ConnPid, MRef, StreamRef) ->
       exit(Reason);
     Else ->
       error_logger:info_msg("receive_data received Else ~w", [Else])
-
   after 1000 ->
     exit(timeout)
   end.
 
 extract_url(#{<<"ok">> := true, <<"url">> := Url} = _ParsedJson) ->
-  binary_to_list(Url);
+  {ok, binary_to_list(Url)};
 extract_url(#{<<"error">> := Error} = _ParsedJson) ->
   exit({error, Error});
 extract_url(ParsedJson) ->

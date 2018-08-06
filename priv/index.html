@@ -4,11 +4,125 @@
     <title>Agner Player</title>
     <script src="/static/main.js"></script>
 
+    <style>
+      html {
+        font-family: Courier;
+      }
+
+      #title {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 5;
+        color: white;
+        background: black;
+        margin: 0;
+        padding: 15px;
+        text-align: center;
+      }
+
+      #player {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #output {
+        position: fixed;
+        top: 67px;
+        right: 0;
+        width: 33%;
+        z-index: 3;
+        background: rgba(255, 255, 255, 0.56);
+        padding: 30px;
+        overflow: scroll;
+        height: calc(100% - 134px);
+        font-family: Courier;
+        font-size: 11px;
+        max-width: 400px;
+        box-sizing: border-box;
+      }
+
+      #output p {
+        font-family: Courier;
+        font-size: 11px;
+      }
+
+      input[type="button"] {
+        outline: none;
+        position: fixed;
+        bottom: 0px;
+        z-index: 5;
+        width: 200px;
+        height: 67px;
+        background: #1a5df3;
+        right: 0;
+        color: black;
+        font-family: Courier;
+        border: none;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        width: 33%;
+        max-width: 400px;
+        font-size: 20px;
+      }
+
+      #close {
+        display: none;
+      }
+
+      label {
+        top: 32px;
+        right: 23px;
+        width: 40px;
+        height: 3px;
+        background: white;
+        padding: 0;
+        cursor: pointer;
+        position: fixed;
+        z-index: 5;
+      }
+
+      label::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 3px;
+        top: -10px;
+        position: absolute;
+        padding-bottom: 20px;
+        border-top: 3px solid white;
+      }
+
+      label::after {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 3px;
+        background: white;
+        bottom: -10px;
+        position: absolute;
+      }
+
+      #close:checked ~ #output,
+      #close:checked ~ input[type="button"] {
+        display: none;
+      }
+
+    </style>
 </head>
 
 <body>
+<h1 id="title"></h1>
 <div id="player"></div>
 <div id="content">
+    <input type="checkbox" name="close" id="close" checked="checked">
+    <label for="close">X</label>
+    <input type="button" onclick="reconnectSlack()" value="reconnect slack">
     <p>
         Communication:
     </p>
@@ -20,6 +134,7 @@
 <script type="text/javascript">
     var tag;
     var firstScriptTag;
+    var wsClient;
 
     tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
@@ -27,10 +142,15 @@
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
     function onYouTubeIframeAPIReady() {
-        var wsHost = "ws://" + window.location.host + "/player";
-        var wsClient = new PlayerClient(wsHost);
+        var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        var wsHost = scheme + "://" + window.location.host + "/player";
+        wsClient = new PlayerClient(wsHost);
 
         wsClient.init();
+    }
+
+    function reconnectSlack() {
+        wsClient.reconnectSlack();
     }
 </script>
 </html>

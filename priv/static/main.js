@@ -9,8 +9,8 @@ PlayerClient = function (wssHost) {
         print('<span style="color: green;">INIT PLAYER </span>');
 
         player = new YT.Player('player', {
-            height: '0',
-            width: '0',
+            height: '600',
+            width: '800',
             events: {
                 'onReady': onPlayerReady,
                 'onStateChange': onPlayerStateChange
@@ -119,6 +119,7 @@ PlayerClient = function (wssHost) {
 
         if (event.data === YT.PlayerState.PLAYING) {
             print('<span style="color: green;">VIDEO URL: ' + player.getVideoUrl() + '</span>');
+            setVideoTitle(player.getVideoData().title);
         }
     }
 
@@ -202,7 +203,17 @@ PlayerClient = function (wssHost) {
         parent.insertBefore(node, parent.firstChild);
     }
 
+    function setVideoTitle(title) {
+        var titleElement = document.getElementById("title");
+        titleElement.innerHTML = title;
+    }
+
+    function reconnectSlack() {
+        webSocket.send(JSON.stringify({action: "reconnect_slack"}));
+    }
+
     return {
-        'init': init
+        'init': init,
+        'reconnectSlack': reconnectSlack
     }
 };

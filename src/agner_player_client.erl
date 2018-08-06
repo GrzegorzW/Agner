@@ -11,7 +11,6 @@ websocket_init(State) ->
 
 websocket_handle({text, Msg}, State) ->
   JsonRequest = jiffy:decode(Msg, [return_maps]),
-  error_logger:info_msg("Request: ~s", [JsonRequest]),
   case websocket_handle_message(JsonRequest) of
     {reply, Json} ->
       {reply, {text, Json}, State};
@@ -28,6 +27,10 @@ websocket_handle_message(#{<<"action">> := <<"ping">>} = _ParsedJson) ->
 
 websocket_handle_message(#{<<"action">> := <<"delete">>, <<"movieId">> := MovieId} = _ParsedJson) ->
   ok = agner_player_server:delete(binary_to_list(MovieId)),
+  noreply;
+
+websocket_handle_message(#{<<"action">> := <<"reconnect_slack">>} = _ParsedJson) ->
+  ok = agner_player_server:reconnect_slack(),
   noreply;
 
 websocket_handle_message(_ParsedJson) ->
