@@ -10,9 +10,10 @@
   add/3,
   get/0,
   delete/0,
+  delete/1,
+  previous/0,
   pause/0,
   seek/1,
-  delete/1,
   has_active_subscriber/0,
   reconnect_slack/0,
   chat_connected/1
@@ -56,6 +57,9 @@ delete() ->
 
 delete(MovieId) ->
   gen_server:cast(?MODULE, {delete, MovieId}).
+
+previous() ->
+  gen_server:cast(?MODULE, previous).
 
 chat_connected(Pid) ->
   gen_server:cast(?MODULE, {chat_connected, Pid}).
@@ -106,6 +110,10 @@ handle_cast(get, State = #playlist_state{queue = Queue, player_client = PlayerCl
 
 handle_cast(pause, State = #playlist_state{player_client = PlayerClient}) ->
   PlayerClient ! pause,
+  {noreply, State};
+
+handle_cast(previous, State = #playlist_state{player_client = PlayerClient}) ->
+  PlayerClient ! previous,
   {noreply, State};
 
 handle_cast(delete, State = #playlist_state{player_client = PlayerClient}) ->
