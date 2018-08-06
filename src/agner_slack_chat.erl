@@ -128,7 +128,8 @@ resolve_intent(Text) ->
     {next, "^next$", []},
     {delete, "^delete$", []},
     {pause, "^pause", []},
-    {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]}
+    {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]},
+    {seek, "^seek (?<to>([0-9]*))$", [{capture, ['to'], binary}]}
   ]).
 
 resolve_intent(Text, [{Intent, Regex, Options} | Rest]) ->
@@ -149,5 +150,7 @@ handle_intent({pause, _Captured}) ->
   agner_player_server:pause();
 handle_intent({delete, _Captured}) ->
   agner_player_server:delete();
+handle_intent({seek, [To]}) ->
+  agner_player_server:seek(To);
 handle_intent({nomatch, Text}) ->
   error_logger:info_msg("Nomatch. Text: ~s", [Text]).

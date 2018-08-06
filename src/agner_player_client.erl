@@ -54,6 +54,13 @@ websocket_info({volume, Level}, State) ->
   }),
   {reply, {text, Response}, State};
 
+websocket_info({seek, To}, State) ->
+  Response = jiffy:encode(#{
+    <<"action">> => <<"seek">>,
+    <<"to">> => To
+  }),
+  {reply, {text, Response}, State};
+
 websocket_info({play, MovieId, Source}, State) ->
   Response = jiffy:encode(#{
     <<"action">> => <<"play">>,

@@ -11,6 +11,7 @@
   get/0,
   delete/0,
   pause/0,
+  seek/1,
   delete/1,
   has_active_subscriber/0,
   reconnect_slack/0,
@@ -34,6 +35,9 @@ subscribe(ClientPid) when is_pid(ClientPid) ->
 
 volume(Level) ->
   gen_server:cast(?MODULE, {volume, Level}).
+
+seek(To) ->
+  gen_server:cast(?MODULE, {seek, To}).
 
 next() ->
   gen_server:cast(?MODULE, next).
@@ -65,6 +69,11 @@ has_active_subscriber() ->
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
   error_logger:info_msg("~p ! volume ~p", [PlayerClient, Level]),
   PlayerClient ! {volume, Level},
+  {noreply, State};
+
+handle_cast({seek, To}, State = #playlist_state{player_client = PlayerClient}) ->
+  error_logger:info_msg("~p ! seek to ~p", [PlayerClient, To]),
+  PlayerClient ! {seek, To},
   {noreply, State};
 
 handle_cast(next, State = #playlist_state{player_client = PlayerClient}) ->
