@@ -91,17 +91,8 @@ randomize(RecentMovies) ->
     false -> MovieId
   end.
 
-expire_items(List) ->
-  expire_items(List, []).
-
-expire_items([], Result) ->
-  Result;
-expire_items([{Item, ExpiresAt} | Tail], Result) ->
-  NewResult = case os:system_time() > ExpiresAt of
-                true -> expire_items(Tail, Result);
-                false -> expire_items(Tail, [Item | Result])
-              end,
-  expire_items(Tail, NewResult).
+expire_items(ExpiringItems) ->
+  [ExpiringItem || ExpiringItem = {_Item, ExpiresAt} <- ExpiringItems, os:system_time() < ExpiresAt].
 
 calculate_ttl() ->
   os:system_time() + get_songs_count() * 120 * 1000.

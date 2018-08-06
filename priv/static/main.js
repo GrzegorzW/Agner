@@ -4,6 +4,8 @@ PlayerClient = function (wssHost) {
     var player;
     var keepAliveInterval;
     var clientPaused = false;
+    var currentVideo;
+    var playedVideos = [];
 
     function init() {
         print('<span style="color: green;">INIT PLAYER </span>');
@@ -65,13 +67,14 @@ PlayerClient = function (wssHost) {
                     "source": msg.source
                 };
 
+                playedVideos.push(video);
                 playVideo(video);
                 break;
             case "next":
                 sendVideoIdRequest();
                 break;
             case "added_to_empty_queue":
-                if (this.currentVideo !== undefined && this.currentVideo.source !== "queue") {
+                if (currentVideo !== undefined && currentVideo.source !== "queue") {
                     sendVideoIdRequest();
                 }
                 break;
@@ -90,6 +93,9 @@ PlayerClient = function (wssHost) {
                 break;
             case "deleted":
                 sendVideoIdRequest();
+                break;
+            case "previous":
+                previous();
                 break;
             case "pong":
                 break;
@@ -127,7 +133,7 @@ PlayerClient = function (wssHost) {
     }
 
     function playVideo(video) {
-        this.currentVideo = video;
+        currentVideo = video;
         player.loadVideoById(video.movieId);
         print('<span style="color: green;">VIDEO LOADED: ' + video.movieId + '</span>');
     }
@@ -156,10 +162,18 @@ PlayerClient = function (wssHost) {
         webSocket.send(JSON.stringify({action: "get"}));
     }
 
+    function previous() {
+        if (playedVideos.length === 1) {
+            playVideo(playedVideos[0]);
+        } else {
+            playVideo(playedVideos.pop());
+        }
+    }
+
     function sendDeleteCurrentVideoRequest() {
         webSocket.send(JSON.stringify({
             action: "delete",
-            movieId: this.currentVideo.movieId
+            movieId: currentVideo.movieId
         }));
     }
 

@@ -77,6 +77,10 @@ websocket_info(delete, State) ->
   Response = jiffy:encode(#{<<"action">> => <<"delete">>}),
   {reply, {text, Response}, State};
 
+websocket_info(previous, State) ->
+  Response = jiffy:encode(#{<<"action">> => <<"previous">>}),
+  {reply, {text, Response}, State};
+
 websocket_info({deleted, MovieId}, State) ->
   Response = jiffy:encode(#{
     <<"action">> => <<"deleted">>,

@@ -62,6 +62,15 @@ delete
 seek <int>
 ```
 
+```
+pause
+```
+
+```
+previous
+```
+
+
 ## Built With
 
 * [Erlang](http://erlang.org/doc/index.html)
