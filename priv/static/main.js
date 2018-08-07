@@ -120,20 +120,92 @@ YTPlayer = function (configuration, logger) {
     }
 };
 
-PlayerClient = function (wssHost, logger) {
+Agner = function (configuration, logger) {
     var webSocket;
-    var timeout = 5000;
+    var keepAliveInterval = setInterval(keepAlive, 5000);
+
+    function connect() {
+        logger.info('CONNECTING: ' + configuration.host);
+
+        webSocket = new WebSocket(configuration.host);
+        webSocket.onopen = function () {
+            logger.info('CONNECTED');
+
+            configuration.onOpen()
+        };
+        webSocket.onclose = function (evt) {
+            logger.error('CLOSE: ' + evt.code + ' ' + evt.reason);
+
+            if (evt.code === 1000) {
+                logger.info('CONNECTION SUCCESSFULLY COMPLETED');
+                clearInterval(keepAliveInterval);
+                logger.info('INTERVAL CLEARED');
+            }
+
+            configuration.onClose(evt)
+        };
+        webSocket.onmessage = function (evt) {
+            logger.debug('MESSAGE: ' + evt.data);
+
+            configuration.onMessage(evt)
+        };
+        webSocket.onerror = function () {
+            logger.error('ERROR');
+        };
+    }
+
+    function keepAlive() {
+        if (webSocket.readyState === webSocket.OPEN) {
+            webSocket.send(JSON.stringify({action: "ping"}));
+        }
+
+        if (webSocket.readyState === webSocket.CLOSED) {
+            connect();
+        }
+    }
+
+    function sendVideoIdRequest() {
+        webSocket.send(JSON.stringify({action: "get"}));
+    }
+
+    function sendDeleteCurrentVideoRequest(movieId) {
+        webSocket.send(JSON.stringify({
+            action: "delete",
+            movieId: movieId
+        }));
+    }
+
+    function reconnectSlack() {
+        webSocket.send(JSON.stringify({action: "reconnect_slack"}));
+    }
+
+    connect();
+
+    return {
+        'sendVideoIdRequest': sendVideoIdRequest,
+        'sendDeleteCurrentVideoRequest': sendDeleteCurrentVideoRequest,
+        'reconnectSlack': reconnectSlack
+    }
+};
+
+Player = function (wssHost, logger) {
     var player;
-    var keepAliveInterval;
+    var agner;
     var clientPaused = false;
     var currentVideo;
     var playedVideos = [];
 
     function init() {
-        var configuration = {
+        var connectionConfiguration = {
+            'host': wssHost,
+            'onOpen': onOpen,
+            'onMessage': onMessage,
+            'onClose': onClose
+        };
+
+        var YTPlayerConfiguration = {
             'onPlayerReady': function () {
-                keepAliveInterval = setInterval(keepAlive, timeout);
-                connect();
+                agner = new Agner(connectionConfiguration, logger)
             },
             'onVideoEnd': function () {
                 setTimeout(sendVideoIdRequest, 2000);
@@ -143,38 +215,16 @@ PlayerClient = function (wssHost, logger) {
             }
         };
 
-        player = new YTPlayer(configuration, logger);
-    }
-
-    function connect() {
-        logger.info('CONNECTING: ' + wssHost);
-
-        webSocket = new WebSocket(wssHost);
-        webSocket.onopen = function () {
-            onOpen()
-        };
-        webSocket.onclose = function (evt) {
-            onClose(evt)
-        };
-        webSocket.onmessage = function (evt) {
-            onMessage(evt)
-        };
-        webSocket.onerror = function () {
-            onError()
-        };
+        player = new YTPlayer(YTPlayerConfiguration, logger);
     }
 
     function onOpen() {
-        logger.info('CONNECTED');
-
         if (clientPaused === false) {
             sendVideoIdRequest();
         }
     }
 
     function onMessage(evt) {
-        logger.debug('RESPONSE: ' + evt.data);
-
         var msg = JSON.parse(evt.data);
 
         switch (msg.action) {
@@ -221,17 +271,8 @@ PlayerClient = function (wssHost, logger) {
         }
     }
 
-    function onError() {
-        logger.error('ERROR');
-    }
-
     function onClose(evt) {
-        logger.error('CLOSE: ' + evt.code + ' ' + evt.reason);
-
         if (evt.code === 1000) {
-            logger.info('CONNECTION SUCCESSFULLY COMPLETED');
-            clearInterval(keepAliveInterval);
-            logger.info('INTERVAL CLEARED');
             player.pause();
         }
     }
@@ -243,7 +284,7 @@ PlayerClient = function (wssHost, logger) {
 
     function sendVideoIdRequest() {
         clientPaused = false;
-        webSocket.send(JSON.stringify({action: "get"}));
+        agner.sendVideoIdRequest()
     }
 
     function previous() {
@@ -255,20 +296,7 @@ PlayerClient = function (wssHost, logger) {
     }
 
     function sendDeleteCurrentVideoRequest() {
-        webSocket.send(JSON.stringify({
-            action: "delete",
-            movieId: currentVideo.movieId
-        }));
-    }
-
-    function keepAlive() {
-        if (webSocket.readyState === webSocket.OPEN) {
-            webSocket.send(JSON.stringify({action: "ping"}));
-        }
-
-        if (webSocket.readyState === webSocket.CLOSED) {
-            connect();
-        }
+        agner.sendDeleteCurrentVideoRequest(currentVideo.movieId);
     }
 
     function setVideoTitle() {
@@ -277,7 +305,7 @@ PlayerClient = function (wssHost, logger) {
     }
 
     function reconnectSlack() {
-        webSocket.send(JSON.stringify({action: "reconnect_slack"}));
+        agner.reconnectSlack()
     }
 
     init();
