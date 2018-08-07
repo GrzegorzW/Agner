@@ -145,8 +145,6 @@
         var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
         var wsHost = scheme + "://" + window.location.host + "/player";
         wsClient = new PlayerClient(wsHost, new HtmlLogger());
-
-        wsClient.init();
     }
 
     function reconnectSlack() {
