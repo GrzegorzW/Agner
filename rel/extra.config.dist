@@ -1,7 +1,6 @@
 [
   {agner, [
     {slack_token, "your_slack_token"},
-    {audio_device, "'SRS-XB2 - A2DP',0"},
     {port, 80}
   ]}
 ].
