@@ -1,4 +1,38 @@
-PlayerClient = function (wssHost) {
+HtmlLogger = function () {
+    function log(color, text) {
+        var html = '<span style="color: ' + color + ';">' + text + '</span>';
+        var node = document.createElement("p");
+        node.innerHTML = '<span>' + new Date().toISOString() + ': </span>' + html;
+
+        var parent = document.getElementById("output");
+
+        if (parent.children.length > 100) {
+            parent.removeChild(parent.lastChild);
+        }
+
+        parent.insertBefore(node, parent.firstChild);
+    }
+
+    function info(text) {
+        log('green', text);
+    }
+
+    function debug(text) {
+        log('blue', text);
+    }
+
+    function error(text) {
+        log('red', text);
+    }
+
+    return {
+        'info': info,
+        'debug': debug,
+        'error': error
+    }
+};
+
+PlayerClient = function (wssHost, logger) {
     var webSocket;
     var timeout = 5000;
     var player;
@@ -8,7 +42,7 @@ PlayerClient = function (wssHost) {
     var playedVideos = [];
 
     function init() {
-        print('<span style="color: green;">INIT PLAYER </span>');
+        logger.info('INIT PLAYER');
 
         player = new YT.Player('player', {
             height: '600',
@@ -30,7 +64,7 @@ PlayerClient = function (wssHost) {
     }
 
     function connect() {
-        print('<span style="color: green;">CONNECTING: ' + wssHost + '</span>');
+        logger.info('CONNECTING: ' + wssHost);
 
         webSocket = new WebSocket(wssHost);
         webSocket.onopen = function () {
@@ -48,7 +82,7 @@ PlayerClient = function (wssHost) {
     }
 
     function onOpen() {
-        print('<span style="color: green;">CONNECTED </span>');
+        logger.info('CONNECTED');
 
         if (clientPaused === false) {
             sendVideoIdRequest();
@@ -56,7 +90,7 @@ PlayerClient = function (wssHost) {
     }
 
     function onMessage(evt) {
-        print('<span style="color: blue;">RESPONSE: ' + evt.data + '</span>');
+        logger.debug('RESPONSE: ' + evt.data);
 
         var msg = JSON.parse(evt.data);
 
@@ -100,34 +134,34 @@ PlayerClient = function (wssHost) {
             case "pong":
                 break;
             default:
-                print('<span style="color: blue;">ACTION NOT HANNDLED: ' + msg.action + '</span>');
+                logger.debug('ACTION NOT HANNDLED: ' + msg.action);
         }
     }
 
     function onError() {
-        print('<span style="color: red;">ERROR </span>');
+        logger.error('ERROR');
     }
 
     function onClose(evt) {
-        print('<span style="color: red;">CLOSE: ' + evt.code + ' ' + evt.reason + '</span>');
+        logger.error('CLOSE: ' + evt.code + ' ' + evt.reason);
 
         if (evt.code === 1000) {
-            print('<span style="color: green;">CONNECTION SUCCESSFULLY COMPLETED </span>');
+            logger.info('CONNECTION SUCCESSFULLY COMPLETED');
             clearInterval(keepAliveInterval);
-            print('<span style="color: green;">INTERVAL CLEARED </span>');
+            logger.info('INTERVAL CLEARED');
             pauseVideo();
         }
     }
 
     function onPlayerStateChange(event) {
-        print('<span style="color: green;">PLAYER STATE: ' + translatePlayerState(event.data) + '</span>');
+        logger.info('PLAYER STATE: ' + translatePlayerState(event.data));
 
         if (event.data === YT.PlayerState.ENDED) {
             setTimeout(sendVideoIdRequest, 2000);
         }
 
         if (event.data === YT.PlayerState.PLAYING) {
-            print('<span style="color: green;">VIDEO URL: ' + player.getVideoUrl() + '</span>');
+            logger.info('VIDEO URL: ' + player.getVideoUrl());
             setVideoTitle(player.getVideoData().title);
         }
     }
@@ -135,7 +169,7 @@ PlayerClient = function (wssHost) {
     function playVideo(video) {
         currentVideo = video;
         player.loadVideoById(video.movieId);
-        print('<span style="color: green;">VIDEO LOADED: ' + video.movieId + '</span>');
+        logger.info('VIDEO LOADED: ' + video.movieId);
     }
 
     function pauseVideo() {
@@ -144,17 +178,17 @@ PlayerClient = function (wssHost) {
 
     function setVolume(volume) {
         player.setVolume(volume);
-        print('<span style="color: green;">CURRENT VOLUME: ' + volume + '</span>');
+        logger.info('CURRENT VOLUME: ' + volume);
     }
 
     function seek(to) {
         player.seekTo(to);
-        print('<span style="color: green;">SEEK TO: ' + to + '</span>');
+        logger.info('SEEK TO: ' + to);
     }
 
     function setQuality(quality) {
         player.setPlaybackQuality(quality);
-        print('<span style="color: green;">CURRENT QUALITY: ' + quality + '</span>');
+        logger.info('CURRENT QUALITY: ' + quality);
     }
 
     function sendVideoIdRequest() {
@@ -181,22 +215,16 @@ PlayerClient = function (wssHost) {
         switch (state) {
             case -1:
                 return "UNSTARTED";
-                break;
             case -0:
                 return "ENDED";
-                break;
             case 1:
                 return "PLAYING";
-                break;
             case 2:
                 return "PAUSED";
-                break;
             case 3:
                 return "BUFFERING";
-                break;
             case 5:
                 return "VIDEO CUED";
-                break;
             default:
                 return "UNKNOWN";
         }
@@ -210,19 +238,6 @@ PlayerClient = function (wssHost) {
         if (webSocket.readyState === webSocket.CLOSED) {
             connect();
         }
-    }
-
-    function print(html) {
-        var node = document.createElement("p");
-        node.innerHTML = '<span>' + new Date().toISOString() + ': </span>' + html;
-
-        var parent = document.getElementById("output");
-
-        if (parent.children.length > 100) {
-            parent.removeChild(parent.lastChild);
-        }
-
-        parent.insertBefore(node, parent.firstChild);
     }
 
     function setVideoTitle(title) {
