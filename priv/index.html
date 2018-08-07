@@ -144,7 +144,7 @@
     function onYouTubeIframeAPIReady() {
         var scheme = location.protocol === 'https:' ? 'wss' : 'ws';
         var wsHost = scheme + "://" + window.location.host + "/player";
-        wsClient = new PlayerClient(wsHost, new HtmlLogger());
+        wsClient = new Player(wsHost, new HtmlLogger());
     }
 
     function reconnectSlack() {
