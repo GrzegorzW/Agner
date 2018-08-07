@@ -32,6 +32,94 @@ HtmlLogger = function () {
     }
 };
 
+YTPlayer = function (configuration, logger) {
+    var player;
+
+    function init() {
+        logger.info('INIT PLAYER');
+
+        player = new YT.Player('player', {
+            height: '600',
+            width: '800',
+            events: {
+                'onReady': function () {
+                    setVolume(50);
+                    setQuality("small");
+                    configuration.onPlayerReady();
+                },
+                'onStateChange': function (event) {
+                    logger.info('PLAYER STATE: ' + translatePlayerState(event.data));
+
+                    if (event.data === YT.PlayerState.ENDED) {
+                        configuration.onVideoEnd();
+                    }
+
+                    if (event.data === YT.PlayerState.PLAYING) {
+                        configuration.onVideoStart();
+                    }
+                }
+            }
+        });
+    }
+
+    function setVolume(volume) {
+        player.setVolume(volume);
+        logger.info('CURRENT VOLUME: ' + volume);
+    }
+
+    function setQuality(quality) {
+        player.setPlaybackQuality(quality);
+        logger.info('CURRENT QUALITY: ' + quality);
+    }
+
+    function getVideoTitle() {
+        return player.getVideoData().title
+    }
+
+    function play(video) {
+        player.loadVideoById(video.movieId);
+        logger.info('VIDEO LOADED: ' + video.movieId);
+    }
+
+    function pause() {
+        player.pauseVideo();
+    }
+
+    function seekTo(to) {
+        player.seekTo(to);
+        logger.info('SEEK TO: ' + to);
+    }
+
+    function translatePlayerState(state) {
+        switch (state) {
+            case -1:
+                return "UNSTARTED";
+            case -0:
+                return "ENDED";
+            case 1:
+                return "PLAYING";
+            case 2:
+                return "PAUSED";
+            case 3:
+                return "BUFFERING";
+            case 5:
+                return "VIDEO CUED";
+            default:
+                return "UNKNOWN";
+        }
+    }
+
+    init();
+
+    return {
+        'setVolume': setVolume,
+        'getVideoTitle': getVideoTitle,
+        'play': play,
+        'pause': pause,
+        'seekTo': seekTo
+    }
+};
+
 PlayerClient = function (wssHost, logger) {
     var webSocket;
     var timeout = 5000;
@@ -42,25 +130,20 @@ PlayerClient = function (wssHost, logger) {
     var playedVideos = [];
 
     function init() {
-        logger.info('INIT PLAYER');
-
-        player = new YT.Player('player', {
-            height: '600',
-            width: '800',
-            events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange
+        var configuration = {
+            'onPlayerReady': function () {
+                keepAliveInterval = setInterval(keepAlive, timeout);
+                connect();
+            },
+            'onVideoEnd': function () {
+                setTimeout(sendVideoIdRequest, 2000);
+            },
+            'onVideoStart': function () {
+                setVideoTitle()
             }
-        });
-    }
+        };
 
-    function onPlayerReady() {
-        setVolume(50);
-        setQuality("small");
-
-        keepAliveInterval = setInterval(keepAlive, timeout);
-
-        connect();
+        player = new YTPlayer(configuration, logger);
     }
 
     function connect() {
@@ -113,14 +196,14 @@ PlayerClient = function (wssHost, logger) {
                 }
                 break;
             case "volume":
-                setVolume(msg.level);
+                player.setVolume(msg.level);
                 break;
             case "seek":
-                seek(msg.to);
+                player.seekTo(msg.to);
                 break;
             case "pause":
                 clientPaused = true;
-                pauseVideo();
+                player.pause();
                 break;
             case "delete":
                 sendDeleteCurrentVideoRequest();
@@ -149,46 +232,13 @@ PlayerClient = function (wssHost, logger) {
             logger.info('CONNECTION SUCCESSFULLY COMPLETED');
             clearInterval(keepAliveInterval);
             logger.info('INTERVAL CLEARED');
-            pauseVideo();
-        }
-    }
-
-    function onPlayerStateChange(event) {
-        logger.info('PLAYER STATE: ' + translatePlayerState(event.data));
-
-        if (event.data === YT.PlayerState.ENDED) {
-            setTimeout(sendVideoIdRequest, 2000);
-        }
-
-        if (event.data === YT.PlayerState.PLAYING) {
-            logger.info('VIDEO URL: ' + player.getVideoUrl());
-            setVideoTitle(player.getVideoData().title);
+            player.pause();
         }
     }
 
     function playVideo(video) {
         currentVideo = video;
-        player.loadVideoById(video.movieId);
-        logger.info('VIDEO LOADED: ' + video.movieId);
-    }
-
-    function pauseVideo() {
-        player.pauseVideo();
-    }
-
-    function setVolume(volume) {
-        player.setVolume(volume);
-        logger.info('CURRENT VOLUME: ' + volume);
-    }
-
-    function seek(to) {
-        player.seekTo(to);
-        logger.info('SEEK TO: ' + to);
-    }
-
-    function setQuality(quality) {
-        player.setPlaybackQuality(quality);
-        logger.info('CURRENT QUALITY: ' + quality);
+        player.play(video);
     }
 
     function sendVideoIdRequest() {
@@ -211,25 +261,6 @@ PlayerClient = function (wssHost, logger) {
         }));
     }
 
-    function translatePlayerState(state) {
-        switch (state) {
-            case -1:
-                return "UNSTARTED";
-            case -0:
-                return "ENDED";
-            case 1:
-                return "PLAYING";
-            case 2:
-                return "PAUSED";
-            case 3:
-                return "BUFFERING";
-            case 5:
-                return "VIDEO CUED";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
     function keepAlive() {
         if (webSocket.readyState === webSocket.OPEN) {
             webSocket.send(JSON.stringify({action: "ping"}));
@@ -240,17 +271,18 @@ PlayerClient = function (wssHost, logger) {
         }
     }
 
-    function setVideoTitle(title) {
+    function setVideoTitle() {
         var titleElement = document.getElementById("title");
-        titleElement.innerHTML = title;
+        titleElement.innerHTML = player.getVideoTitle();
     }
 
     function reconnectSlack() {
         webSocket.send(JSON.stringify({action: "reconnect_slack"}));
     }
 
+    init();
+
     return {
-        'init': init,
         'reconnectSlack': reconnectSlack
     }
 };
