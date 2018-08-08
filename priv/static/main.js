@@ -300,8 +300,11 @@ Player = function (wssHost, logger) {
     }
 
     function setVideoTitle() {
-        var titleElement = document.getElementById("title");
-        titleElement.innerHTML = player.getVideoTitle();
+        var videoTitle = document.getElementById("title");
+        videoTitle.innerHTML = player.getVideoTitle();
+
+        var pageTitle = document.getElementsByTagName("title")[0];
+        pageTitle.innerHTML = 'Agner - ' + player.getVideoTitle();
     }
 
     function reconnectSlack() {
