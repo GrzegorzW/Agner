@@ -6,8 +6,6 @@
 
 -export([add/3, delete/1, get/0]).
 
--define(GC_INTERVAL, 1000).
-
 -include("agner_playlist.hrl").
 
 start_link() ->
@@ -28,7 +26,7 @@ init([]) ->
         {disc_copies, [node()]}])
   end,
 
-  erlang:send_after(?GC_INTERVAL, self(), start_expiring_timer),
+  timer:apply_interval(timer:seconds(5), ?MODULE, gc, [self()]),
 
   {ok, []}.
 
@@ -91,9 +89,6 @@ randomize(RecentMovies) ->
     false -> MovieId
   end.
 
-expire_items(ExpiringItems) ->
-  [ExpiringItem || ExpiringItem = {_Item, ExpiresAt} <- ExpiringItems, os:system_time() < ExpiresAt].
-
 calculate_ttl() ->
   os:system_time() + get_songs_count() * 120 * 1000.
 
@@ -114,12 +109,11 @@ get_random_movie(Keys) ->
 get_songs_count() ->
   length(mnesia:dirty_all_keys(song)).
 
-handle_info(start_expiring_timer, RecentMovies) ->
-  spawn_gc(),
-  {noreply, RecentMovies};
-
 handle_info({expire}, RecentMovies) ->
   {noreply, expire_items(RecentMovies)}.
+
+expire_items(ExpiringItems) ->
+  [ExpiringItem || ExpiringItem = {_Item, ExpiresAt} <- ExpiringItems, os:system_time() < ExpiresAt].
 
 code_change(_, _, _) ->
   ok.
@@ -127,12 +121,5 @@ code_change(_, _, _) ->
 terminate(_, _) ->
   ok.
 
-spawn_gc() ->
-  spawn(?MODULE, gc, [self()]).
-
 gc(Playlist) ->
-  receive
-  after 60000 ->
-    Playlist ! {expire},
-    gc(Playlist)
-  end.
+  Playlist ! {expire}.
