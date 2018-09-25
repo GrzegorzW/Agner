@@ -93,7 +93,7 @@ calculate_ttl() ->
   os:system_time() + get_songs_count() * 120 * 1000.
 
 get_random_movie() ->
-  error_logger:info_msg("mnesia:get_random_movie"),
+  lager:info("mnesia:get_random_movie"),
   mnesia:wait_for_tables([song], 1000),
 
   Keys = mnesia:dirty_all_keys(song),

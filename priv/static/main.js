@@ -267,7 +267,7 @@ Player = function (wssHost, logger) {
             case "pong":
                 break;
             default:
-                logger.debug('ACTION NOT HANNDLED: ' + msg.action);
+                logger.debug('ACTION NOT HANDLED: ' + msg.action);
         }
     }
 

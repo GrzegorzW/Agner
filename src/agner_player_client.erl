@@ -89,13 +89,13 @@ websocket_info({deleted, MovieId}, State) ->
   {reply, {text, Response}, State};
 
 websocket_info(detach, State) ->
-  error_logger:info_msg(<<"websocket_info detach">>),
+  lager:info("websocket_info detach"),
   {stop, State};
 
 websocket_info(stop, State) ->
-  error_logger:info_msg(<<"websocket_info stop">>),
+  lager:info("websocket_info stop"),
   {stop, State};
 
 websocket_info(Info, State) ->
-  error_logger:info_msg(<<"player_client unsupported message: ~w~n">>, [Info]),
+  lager:info("player_client unsupported message: ~w~n", [Info]),
   {ok, State}.

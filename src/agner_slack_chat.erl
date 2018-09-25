@@ -13,12 +13,7 @@ start_link() ->
 
 connect_chat() ->
   {ok, ConnPid} = connect(),
-
-  MRef = monitor(process, ConnPid),
-
-  erlang:display(monitor_ref),
-  erlang:display(MRef),
-
+  monitor(process, ConnPid),
   upgrade(ConnPid).
 
 connect() ->
@@ -35,18 +30,17 @@ connect() ->
 upgrade(ConnPid) ->
   receive
     {gun_upgrade, ConnPid, _StreamRef, _Protocols, _Headers} ->
-      erlang:display(<<"chat upgrade success">>),
+      lager:info("chat upgrade success"),
       agner_player_server:chat_connected(self()),
       chat(ConnPid);
     {gun_response, ConnPid, _, _, Status, Headers} ->
-      erlang:display(<<"chat gun_response">>),
+      lager:info("chat gun_response"),
       exit({ws_upgrade_failed, Status, Headers});
     {gun_error, ConnPid, _StreamRef, Reason} ->
-      erlang:display(<<"chat gun_error">>),
+      lager:info("chat gun_error"),
       exit({ws_upgrade_failed, Reason});
     Else ->
-      erlang:display(upgrade_message_else),
-      erlang:display(Else),
+      lager:info("upgrade_message_else ~p", [Else]),
       upgrade(ConnPid)
   after 5000 ->
     exit(slack_websocket_timeout)
@@ -60,11 +54,10 @@ chat(ConnPid) ->
     {gun_down, Pid, _Protocol, Reason, _, _} ->
       exit({chat_connection_down, [{pid, Pid}, {reason, Reason}, {connPid, ConnPid}]});
     {shutdown, _Pid} ->
-      erlang:display(<<"closing_slack_connection">>),
+      lager:info("closing_slack_connection"),
       gun:close(ConnPid);
     Else ->
-      erlang:display(chat_message_else),
-      erlang:display(Else),
+      lager:info("upgrade_message_else ~p", [Else]),
       chat(ConnPid)
   end.
 
@@ -80,9 +73,9 @@ handle_parsed_frame(#{<<"type">> := Type} = _ParsedJson) ->
 handle_message(#{<<"subtype">> := <<"message_changed">>} = Message) ->
   handle_sub_message(maps:get(<<"message">>, Message));
 handle_message(#{<<"subtype">> := <<"channel_join">>} = Message) ->
-  error_logger:info_msg("Channel joind. Message: ~s", [Message]);
+  lager:info("Channel joind. Message: ~s", [Message]);
 handle_message(#{<<"subtype">> := SubType} = Message) ->
-  error_logger:info_msg("Unsupported subtype: ~s. Message: ~s", [SubType, Message]);
+  lager:info("Unsupported subtype: ~s. Message: ~s", [SubType, Message]);
 handle_message(#{<<"text">> := Text} = _Message) ->
   handle_text_message(Text).
 
@@ -119,8 +112,7 @@ get_movie_title(#{<<"title">> := Title} = _Attachment) ->
 
 handle_text_message(Text) ->
   Intent = resolve_intent(Text),
-  error_logger:info_msg("Resolved intent: ~w", [Intent]),
-
+  lager:info("Resolved intent: ~w", [Intent]),
   handle_intent(Intent).
 
 resolve_intent(Text) ->
@@ -156,4 +148,4 @@ handle_intent({previous, _Captured}) ->
 handle_intent({seek, [To]}) ->
   agner_player_server:seek(To);
 handle_intent({nomatch, Text}) ->
-  error_logger:info_msg("Nomatch. Text: ~s", [Text]).
+  lager:info("Nomatch. Text: ~s", [Text]).

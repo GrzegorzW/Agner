@@ -27,7 +27,7 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-  error_logger:info_msg(<<"PLAYER SERVER INITIALIZED">>),
+  lager:info("PLAYER SERVER INITIALIZED"),
   State = #playlist_state{queue = queue:new()},
   {ok, State}.
 
@@ -71,17 +71,17 @@ has_active_subscriber() ->
   gen_server:call(?MODULE, has_active_subscriber).
 
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
-  error_logger:info_msg("~p ! volume ~p", [PlayerClient, Level]),
+  lager:info("~p ! volume ~p", [PlayerClient, Level]),
   PlayerClient ! {volume, Level},
   {noreply, State};
 
 handle_cast({seek, To}, State = #playlist_state{player_client = PlayerClient}) ->
-  error_logger:info_msg("~p ! seek to ~p", [PlayerClient, To]),
+  lager:info("~p ! seek to ~p", [PlayerClient, To]),
   PlayerClient ! {seek, To},
   {noreply, State};
 
 handle_cast(next, State = #playlist_state{player_client = PlayerClient}) ->
-  error_logger:info_msg("~p ! next", [PlayerClient]),
+  lager:info("~p ! next", [PlayerClient]),
   PlayerClient ! next,
   {noreply, State};
 
@@ -95,7 +95,7 @@ handle_cast({add, MovieId, Title, User}, State = #playlist_state{queue = Queue, 
   {noreply, NewState};
 
 handle_cast(get, State = #playlist_state{queue = Queue, player_client = PlayerClient}) ->
-  error_logger:info_msg("~p ! play", [PlayerClient]),
+  lager:info("~p ! play", [PlayerClient]),
   NewState = case queue:is_empty(Queue) of
                true ->
                  {ok, MovieId} = agner_playlist:get(),
@@ -133,7 +133,7 @@ handle_cast(reconnect_slack, State = #playlist_state{chat = Pid}) when is_pid(Pi
   {noreply, State};
 
 handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = CurrentClient}) ->
-  error_logger:info_msg("Client connected: ~p", [NewClient]),
+  lager:info("Client connected: ~p", [NewClient]),
   maybe_detach_client(CurrentClient),
   NewState = State#playlist_state{player_client = NewClient},
   NewClient ! subscriber_added,
@@ -149,7 +149,7 @@ handle_call(terminate, _From, State) ->
   {stop, normal, ok, State}.
 
 handle_info(Msg, State) ->
-  error_logger:warning_msg("Unexpected message: ~w~n", [Msg]),
+  lager:warning("Unexpected message: ~w~n", [Msg]),
   {noreply, State}.
 
 maybe_detach_client(ClientPid) when is_pid(ClientPid) ->

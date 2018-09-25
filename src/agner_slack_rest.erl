@@ -1,16 +1,29 @@
 -module(agner_slack_rest).
 
 -define(SLACK_HOST, "slack.com").
--define(SLACK_REST_URI, "/api/rtm.connect?token=").
+-define(SLACK_WS_URI, "/api/rtm.connect").
+-define(SLACK_USER_PROFILE_URI, "/api/users.profile.get").
 
--export([obtain_wss_url/0]).
+-export([
+  obtain_wss_url/0,
+  obtain_user_profile/1
+]).
 
 obtain_wss_url() ->
+  {ok, SlackToken} = application:get_env(slack_token),
+  Url = erlang:iolist_to_binary([?SLACK_WS_URI, "?token=", SlackToken]),
+  get_data(Url).
+
+obtain_user_profile(UserId) ->
+  {ok, SlackToken} = application:get_env(slack_token),
+  Url = erlang:iolist_to_binary([?SLACK_USER_PROFILE_URI, "?token=", SlackToken, "&user=", UserId]),
+  get_data(Url).
+
+get_data(Url) ->
+  lager:info("getting data from url: ~p", [Url]),
+
   {ok, ConnPid} = gun:open(?SLACK_HOST, 443),
   {ok, _Protocol} = gun:await_up(ConnPid),
-  {ok, SlackToken} = application:get_env(slack_token),
-
-  Url = erlang:iolist_to_binary([?SLACK_REST_URI, SlackToken]),
 
   MRef = gun:get(ConnPid, Url),
 
@@ -20,8 +33,7 @@ obtain_wss_url() ->
     {gun_response, ConnPid, StreamRef, nofin, _Status, _Headers} ->
       receive_data(ConnPid, MRef, StreamRef);
     {'DOWN', MRef, process, ConnPid, Reason} ->
-      error_logger:error_msg("Oops!"),
-      exit(Reason)
+      exit({slack_connection_error, Reason})
   after 1000 ->
     exit(timeout)
   end.
@@ -30,20 +42,22 @@ receive_data(ConnPid, MRef, StreamRef) ->
   receive
     {gun_data, ConnPid, StreamRef, _FinStatus, Data} ->
       ParsedJson = jiffy:decode(Data, [return_maps]),
-      extract_url(ParsedJson);
+      extract_data(ParsedJson);
     {'DOWN', MRef, process, ConnPid, Reason} ->
-      error_logger:error_msg("Unable to obtain wss url"),
-      exit(Reason);
+      exit({slack_receive_data_error, Reason});
     Else ->
-      error_logger:info_msg("receive_data received Else ~w", [Else])
+      lager:info("receive_data received Else ~w", [Else])
   after 1000 ->
     exit(timeout)
   end.
 
-extract_url(#{<<"ok">> := true, <<"url">> := Url} = _ParsedJson) ->
+extract_data(#{<<"ok">> := true, <<"url">> := Url} = _ParsedJson) ->
   {ok, binary_to_list(Url)};
-extract_url(#{<<"error">> := Error} = _ParsedJson) ->
-  exit({error, Error});
-extract_url(ParsedJson) ->
-  exit({error, unable_to_extract_url, ParsedJson}).
+extract_data(#{<<"ok">> := true, <<"profile">> := Profile} = _ParsedJson) ->
+  lager:info("profile: ~p", [Profile]),
 
+  {ok};
+extract_data(#{<<"error">> := _Error} = ParsedJson) ->
+  exit({slack_error, ParsedJson});
+extract_data(ParsedJson) ->
+  exit({slack_error, unable_to_extract_data, ParsedJson}).
