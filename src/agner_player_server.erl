@@ -14,9 +14,10 @@
   previous/0,
   pause/0,
   seek/1,
-  has_active_subscriber/0,
   reconnect_slack/0,
-  chat_connected/1
+  chat_connected/1,
+  now/1,
+  answer/2
 ]).
 
 -record(playlist_state, {queue, player_client, current_song, chat}).
@@ -67,8 +68,11 @@ chat_connected(Pid) ->
 reconnect_slack() ->
   gen_server:cast(?MODULE, reconnect_slack).
 
-has_active_subscriber() ->
-  gen_server:call(?MODULE, has_active_subscriber).
+now(MessageId) ->
+  gen_server:cast(?MODULE, {question, now, MessageId}).
+
+answer(MessageId, Answer) ->
+  gen_server:cast(?MODULE, {answer, MessageId, Answer}).
 
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
   lager:info("~p ! volume ~p", [PlayerClient, Level]),
@@ -132,18 +136,22 @@ handle_cast(reconnect_slack, State = #playlist_state{chat = Pid}) when is_pid(Pi
   Pid ! {shutdown, self()},
   {noreply, State};
 
+handle_cast({answer, MessageId, Answer}, State = #playlist_state{chat = Chat}) when is_pid(Chat) ->
+  lager:info("Answering. MessageId: ~p Answer: ~p", [MessageId, Answer]),
+
+  Chat ! {answer, MessageId, Answer},
+  {noreply, State};
+
 handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = CurrentClient}) ->
   lager:info("Client connected: ~p", [NewClient]),
   maybe_detach_client(CurrentClient),
   NewState = State#playlist_state{player_client = NewClient},
   NewClient ! subscriber_added,
-  {noreply, NewState}.
+  {noreply, NewState};
 
-handle_call(has_active_subscriber, _From, State = #playlist_state{player_client = undefined}) ->
-  {reply, false, State};
-
-handle_call(has_active_subscriber, _From, State) ->
-  {reply, true, State};
+handle_cast({question, now, MessageId}, State = #playlist_state{player_client = Player}) ->
+  Player ! {now, MessageId},
+  {noreply, State}.
 
 handle_call(terminate, _From, State) ->
   {stop, normal, ok, State}.

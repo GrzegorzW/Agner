@@ -33,6 +33,10 @@ websocket_handle_message(#{<<"action">> := <<"reconnect_slack">>} = _ParsedJson)
   ok = agner_player_server:reconnect_slack(),
   noreply;
 
+websocket_handle_message(#{<<"action">> := <<"answer">>, <<"messageId">> := MessageId, <<"answer">> := Answer} = _) ->
+  ok = agner_player_server:answer(MessageId, Answer),
+  noreply;
+
 websocket_handle_message(_ParsedJson) ->
   {reply, jiffy:encode(#{<<"action">> => <<"error">>, <<"reason">> => <<"unsupported_action">>})}.
 
@@ -79,6 +83,10 @@ websocket_info(delete, State) ->
 
 websocket_info(previous, State) ->
   Response = jiffy:encode(#{<<"action">> => <<"previous">>}),
+  {reply, {text, Response}, State};
+
+websocket_info({now, MessageId}, State) ->
+  Response = jiffy:encode(#{<<"action">> => <<"now">>, <<"messageId">> => MessageId}),
   {reply, {text, Response}, State};
 
 websocket_info({deleted, MovieId}, State) ->

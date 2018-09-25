@@ -156,7 +156,7 @@ Agner = function (configuration, logger) {
 
     function keepAlive() {
         if (webSocket.readyState === webSocket.OPEN) {
-            webSocket.send(JSON.stringify({action: "ping"}));
+            send({action: "ping"});
         }
 
         if (webSocket.readyState === webSocket.CLOSED) {
@@ -165,18 +165,23 @@ Agner = function (configuration, logger) {
     }
 
     function sendVideoIdRequest() {
-        webSocket.send(JSON.stringify({action: "get"}));
+        send({action: "get"});
     }
 
     function sendDeleteCurrentVideoRequest(movieId) {
-        webSocket.send(JSON.stringify({
-            action: "delete",
-            movieId: movieId
-        }));
+        send({action: "delete", movieId: movieId});
     }
 
     function reconnectSlack() {
-        webSocket.send(JSON.stringify({action: "reconnect_slack"}));
+        send({action: "reconnect_slack"});
+    }
+
+    function answer(messageId, answer) {
+        send({action: "answer", messageId: messageId, answer: answer});
+    }
+
+    function send(message) {
+        webSocket.send(JSON.stringify(message));
     }
 
     connect();
@@ -184,7 +189,8 @@ Agner = function (configuration, logger) {
     return {
         'sendVideoIdRequest': sendVideoIdRequest,
         'sendDeleteCurrentVideoRequest': sendDeleteCurrentVideoRequest,
-        'reconnectSlack': reconnectSlack
+        'reconnectSlack': reconnectSlack,
+        'answer': answer
     }
 };
 
@@ -264,6 +270,9 @@ Player = function (wssHost, logger) {
             case "previous":
                 previous();
                 break;
+            case "now":
+                sendCurrentMovieTitle(msg.messageId);
+                break;
             case "pong":
                 break;
             default:
@@ -297,6 +306,12 @@ Player = function (wssHost, logger) {
 
     function sendDeleteCurrentVideoRequest() {
         agner.sendDeleteCurrentVideoRequest(currentVideo.movieId);
+    }
+
+    function sendCurrentMovieTitle(messageId) {
+
+        logger.info('now on ' + messageId);
+        agner.answer(messageId, player.getVideoTitle())
     }
 
     function setVideoTitle() {
