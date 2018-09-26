@@ -135,6 +135,7 @@ resolve_intent(Text) ->
     {pause, "^pause", []},
     {previous, "^previous", []},
     {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]},
+    {say, "^say (?<message>(.*))$", [{capture, ['message'], binary}]},
     {seek, "^seek (?<to>([0-9]*))$", [{capture, ['to'], binary}]},
     {now, "^now$", []}
   ]).
@@ -153,6 +154,8 @@ handle_intent({next, _Captured}, _Message) ->
   agner_player_server:next();
 handle_intent({volume, [Level]}, _Message) ->
   agner_player_server:volume(Level);
+handle_intent({say, [Text]}, _Message) ->
+  agner_player_server:say(Text);
 handle_intent({pause, _Captured}, _Message) ->
   agner_player_server:pause();
 handle_intent({delete, _Captured}, _Message) ->

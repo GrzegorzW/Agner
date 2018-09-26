@@ -6,6 +6,7 @@
 -export([
   subscribe/1,
   volume/1,
+  say/1,
   next/0,
   add/3,
   get/0,
@@ -37,6 +38,9 @@ subscribe(ClientPid) when is_pid(ClientPid) ->
 
 volume(Level) ->
   gen_server:cast(?MODULE, {volume, Level}).
+
+say(Text) ->
+  gen_server:cast(?MODULE, {say, Text}).
 
 seek(To) ->
   gen_server:cast(?MODULE, {seek, To}).
@@ -77,6 +81,11 @@ answer(MessageId, Answer) ->
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
   lager:info("~p ! volume ~p", [PlayerClient, Level]),
   PlayerClient ! {volume, Level},
+  {noreply, State};
+
+handle_cast({say, Message}, State = #playlist_state{player_client = PlayerClient}) ->
+  lager:info("~p ! say ~p", [PlayerClient, Message]),
+  PlayerClient ! {say, Message},
   {noreply, State};
 
 handle_cast({seek, To}, State = #playlist_state{player_client = PlayerClient}) ->

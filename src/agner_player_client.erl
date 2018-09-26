@@ -58,6 +58,13 @@ websocket_info({volume, Level}, State) ->
   }),
   {reply, {text, Response}, State};
 
+websocket_info({say, Text}, State) ->
+  Response = jiffy:encode(#{
+    <<"action">> => <<"say">>,
+    <<"text">> => Text
+  }),
+  {reply, {text, Response}, State};
+
 websocket_info({seek, To}, State) ->
   Response = jiffy:encode(#{
     <<"action">> => <<"seek">>,

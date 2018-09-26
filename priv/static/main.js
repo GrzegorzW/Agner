@@ -67,6 +67,12 @@ YTPlayer = function (configuration, logger) {
         logger.info('CURRENT VOLUME: ' + volume);
     }
 
+    function getVolume() {
+        logger.info('GETTING VOLUME');
+
+        return player.getVolume();
+    }
+
     function setQuality(quality) {
         player.setPlaybackQuality(quality);
         logger.info('CURRENT QUALITY: ' + quality);
@@ -113,6 +119,7 @@ YTPlayer = function (configuration, logger) {
 
     return {
         'setVolume': setVolume,
+        'getVolume': getVolume,
         'getVideoTitle': getVideoTitle,
         'play': play,
         'pause': pause,
@@ -273,6 +280,9 @@ Player = function (wssHost, logger) {
             case "now":
                 sendCurrentMovieTitle(msg.messageId);
                 break;
+            case "say":
+                say(msg.text);
+                break;
             case "pong":
                 break;
             default:
@@ -309,7 +319,6 @@ Player = function (wssHost, logger) {
     }
 
     function sendCurrentMovieTitle(messageId) {
-
         logger.info('now on ' + messageId);
         agner.answer(messageId, player.getVideoTitle())
     }
@@ -324,6 +333,29 @@ Player = function (wssHost, logger) {
 
     function reconnectSlack() {
         agner.reconnectSlack()
+    }
+
+    function say(text) {
+        if (window.speechSynthesis.speaking) {
+            setTimeout(say, 100, text);
+        } else {
+            setTimeout(
+                function (text) {
+                    var msg = new SpeechSynthesisUtterance(text);
+                    var previousVolume = player.getVolume();
+
+                    msg.lang = 'pl-PL';
+                    msg.onend = function () {
+                        player.setVolume(previousVolume);
+                    };
+
+                    player.setVolume(previousVolume * 0.1);
+                    window.speechSynthesis.speak(msg);
+                },
+                100,
+                text
+            )
+        }
     }
 
     init();
