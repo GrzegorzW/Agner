@@ -84,8 +84,9 @@ handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClien
   {noreply, State};
 
 handle_cast({say, Message}, State = #playlist_state{player_client = PlayerClient}) ->
-  lager:info("~p ! say ~p", [PlayerClient, Message]),
-  PlayerClient ! {say, Message},
+  Trimmed = trim_message(Message, 80),
+  lager:info("~p ! say ~p", [PlayerClient, Trimmed]),
+  PlayerClient ! {say, Trimmed},
   {noreply, State};
 
 handle_cast({seek, To}, State = #playlist_state{player_client = PlayerClient}) ->
@@ -180,3 +181,6 @@ terminate(_, _) ->
 
 code_change(_, _, _) ->
   ok.
+
+trim_message(Message, Length) ->
+  list_to_binary(lists:sublist(binary_to_list(Message), Length)).
