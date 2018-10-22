@@ -141,7 +141,7 @@ resolve_intent(Text) ->
   ]).
 
 resolve_intent(Text, [{Intent, Regex, Options} | Rest]) ->
-  case re:run(Text, Regex, Options) of
+  case re:run(Text, Regex, [caseless | Options]) of
     {match, Captured} ->
       {Intent, Captured};
     nomatch ->
