@@ -66,7 +66,8 @@ chat(ConnPid) ->
         <<"channel">> => Channel,
         <<"text">> => Text
       }),
-      gun:ws_send(ConnPid, {text, Response});
+      gun:ws_send(ConnPid, {text, Response}),
+      chat(ConnPid);
     Else ->
       lager:info("chat message ~p", [Else]),
       chat(ConnPid)
