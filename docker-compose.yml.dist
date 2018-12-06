@@ -9,4 +9,4 @@ services:
     command: make run
     tty: true
     ports:
-      - "7777:7777"
+      - "7777:80"
