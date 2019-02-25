@@ -66,7 +66,8 @@ chat(ConnPid) ->
         <<"channel">> => Channel,
         <<"text">> => Text
       }),
-      gun:ws_send(ConnPid, {text, Response}),
+      ok = gun:ws_send(ConnPid, {text, Response}),
+      lager:info("Answered. MessageId: ~p Message: ~p", [Channel, Response]),
       chat(ConnPid);
     Else ->
       lager:info("chat message ~p", [Else]),
@@ -135,6 +136,7 @@ resolve_intent(Text) ->
     {delete, "^delete$", []},
     {pause, "^pause", []},
     {previous, "^previous", []},
+    {volume, "^volume$", []},
     {volume, "^volume (?<level>([0-9]|[1-9][0-9]|100))$", [{capture, ['level'], binary}]},
     {say, "^say (?<message>(.*))$", [{capture, ['message'], binary}]},
     {seek, "^seek (?<to>([0-9]*))$", [{capture, ['to'], binary}]},
@@ -153,6 +155,9 @@ resolve_intent(Text, []) ->
 
 handle_intent({next, _Captured}, _Message) ->
   agner_player_server:next();
+handle_intent({volume, [Captured]}, #{<<"channel">> := Channel} = Message) when is_tuple(Captured)->
+  lager:info(jiffy:encode(Message)),
+  agner_player_server:get_volume(Channel);
 handle_intent({volume, [Level]}, _Message) ->
   agner_player_server:volume(Level);
 handle_intent({say, [Text]}, _Message) ->

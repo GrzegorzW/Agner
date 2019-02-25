@@ -18,7 +18,8 @@
   reconnect_slack/0,
   chat_connected/1,
   now/1,
-  answer/2
+  answer/2,
+  get_volume/1
 ]).
 
 -record(playlist_state, {queue, player_client, current_song, chat}).
@@ -74,6 +75,9 @@ reconnect_slack() ->
 
 now(MessageId) ->
   gen_server:cast(?MODULE, {question, now, MessageId}).
+
+get_volume(MessageId) ->
+  gen_server:cast(?MODULE, {question, get_volume, MessageId}).
 
 answer(MessageId, Answer) ->
   gen_server:cast(?MODULE, {answer, MessageId, Answer}).
@@ -161,6 +165,10 @@ handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = Curr
 
 handle_cast({question, now, MessageId}, State = #playlist_state{player_client = Player}) ->
   Player ! {now, MessageId},
+  {noreply, State};
+
+handle_cast({question, get_volume, MessageId}, State = #playlist_state{player_client = Player}) ->
+  Player ! {get_volume, MessageId},
   {noreply, State}.
 
 handle_call(terminate, _From, State) ->

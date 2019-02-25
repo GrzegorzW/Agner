@@ -280,6 +280,9 @@ Player = function (wssHost, logger) {
             case "now":
                 sendCurrentMovieTitle(msg.messageId);
                 break;
+            case "get_volume":
+                sendCurrentVolume(msg.messageId);
+                break;
             case "say":
                 say(msg.text);
                 break;
@@ -321,6 +324,11 @@ Player = function (wssHost, logger) {
     function sendCurrentMovieTitle(messageId) {
         logger.info('now on ' + messageId);
         agner.answer(messageId, player.getVideoTitle())
+    }
+
+    function sendCurrentVolume(messageId) {
+        logger.info('now on ' + messageId);
+        agner.answer(messageId, 'Current volume: ' + player.getVolume())
     }
 
     function setVideoTitle() {

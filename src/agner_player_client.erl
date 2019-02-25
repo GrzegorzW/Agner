@@ -96,6 +96,10 @@ websocket_info({now, MessageId}, State) ->
   Response = jiffy:encode(#{<<"action">> => <<"now">>, <<"messageId">> => MessageId}),
   {reply, {text, Response}, State};
 
+websocket_info({get_volume, MessageId}, State) ->
+  Response = jiffy:encode(#{<<"action">> => <<"get_volume">>, <<"messageId">> => MessageId}),
+  {reply, {text, Response}, State};
+
 websocket_info({deleted, MovieId}, State) ->
   Response = jiffy:encode(#{
     <<"action">> => <<"deleted">>,
