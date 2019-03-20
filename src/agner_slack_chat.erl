@@ -59,6 +59,9 @@ chat(ConnPid) ->
     {shutdown, _Pid} ->
       lager:info("closing_slack_connection"),
       gun:close(ConnPid);
+    {'DOWN', _Mref, process, ConnPid, Reason} ->
+      lager:info("chat_down"),
+      exit(Reason);
     {answer, Channel, Text} ->
       Response = jiffy:encode(#{
         <<"id">> => 1,
@@ -155,7 +158,7 @@ resolve_intent(Text, []) ->
 
 handle_intent({next, _Captured}, _Message) ->
   agner_player_server:next();
-handle_intent({volume, [Captured]}, #{<<"channel">> := Channel} = Message) when is_tuple(Captured)->
+handle_intent({volume, [Captured]}, #{<<"channel">> := Channel} = Message) when is_tuple(Captured) ->
   lager:info(jiffy:encode(Message)),
   agner_player_server:get_volume(Channel);
 handle_intent({volume, [Level]}, _Message) ->
