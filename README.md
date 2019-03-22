@@ -51,6 +51,10 @@ next
 ```
 
 ```
+volume
+```
+
+```
 volume 0-100
 ```
 
@@ -70,6 +74,14 @@ pause
 previous
 ```
 
+```
+now
+```
+
+```
+say <string>
+```
+
 
 ## Built With
 
@@ -82,5 +94,4 @@ MIT - [read license](LICENSE)
 
 ## Todo
 
-* print queue
 * print current
