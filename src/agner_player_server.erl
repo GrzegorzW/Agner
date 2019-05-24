@@ -19,7 +19,8 @@
   chat_connected/1,
   now/1,
   answer/2,
-  get_volume/1
+  get_volume/1,
+  play/1
 ]).
 
 -record(playlist_state, {queue, player_client, current_song, chat}).
@@ -81,6 +82,9 @@ get_volume(MessageId) ->
 
 answer(MessageId, Answer) ->
   gen_server:cast(?MODULE, {answer, MessageId, Answer}).
+
+play(MovieId) ->
+  gen_server:cast(?MODULE, {play, MovieId}).
 
 handle_cast({volume, Level}, State = #playlist_state{player_client = PlayerClient}) ->
   lager:info("~p ! volume ~p", [PlayerClient, Level]),
@@ -164,11 +168,17 @@ handle_cast({subscribe, NewClient}, State = #playlist_state{player_client = Curr
   {noreply, NewState};
 
 handle_cast({question, now, MessageId}, State = #playlist_state{player_client = Player}) ->
+  lager:info("~p ! {now, ~s}", [Player, MessageId]),
   Player ! {now, MessageId},
   {noreply, State};
 
 handle_cast({question, get_volume, MessageId}, State = #playlist_state{player_client = Player}) ->
   Player ! {get_volume, MessageId},
+  {noreply, State};
+
+handle_cast({play, MovieId}, State = #playlist_state{player_client = PlayerClient}) ->
+  lager:info("~p ! play", [PlayerClient]),
+  PlayerClient ! {play, MovieId, enforced},
   {noreply, State}.
 
 handle_call(terminate, _From, State) ->

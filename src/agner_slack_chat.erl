@@ -153,6 +153,8 @@ resolve_intent(Text, [{Intent, Regex, Options} | Rest]) ->
     nomatch ->
       resolve_intent(Text, Rest)
   end;
+resolve_intent(<<"elo">>, []) ->
+  {play, ["oXJ6wWy5wXU"]};
 resolve_intent(Text, []) ->
   {nomatch, Text}.
 
@@ -175,6 +177,8 @@ handle_intent({seek, [To]}, _Message) ->
   agner_player_server:seek(To);
 handle_intent({nomatch, Text}, _Message) ->
   lager:info("Nomatch. Text: ~s", [Text]);
+handle_intent({play, [MoveId]}, _Me0ssage) ->
+  agner_player_server:play(MoveId);
 handle_intent({now, _Captured}, #{<<"channel">> := Channel} = Message) ->
   lager:info(jiffy:encode(Message)),
   agner_player_server:now(Channel).
