@@ -14,8 +14,8 @@ init([]) ->
     permanent, 5000, worker, [agner_slack_chat]
   }, {
     player_server,
-    {agner_player_server, start_link, []},
-    permanent, 5000, worker, [agner_player_server]
+    {agner_server, start_link, []},
+    permanent, 5000, worker, [agner_server]
   }, {
     agner_playlist,
     {agner_playlist, start_link, []},

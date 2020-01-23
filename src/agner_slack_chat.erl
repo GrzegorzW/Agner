@@ -31,7 +31,7 @@ upgrade(ConnPid) ->
   receive
     {gun_upgrade, ConnPid, _StreamRef, _Protocols, _Headers} ->
       lager:info("chat upgrade success"),
-      agner_player_server:chat_connected(self()),
+      agner_server:chat_connected(self()),
       chat(ConnPid);
     {gun_response, ConnPid, _, _, Status, Headers} ->
       lager:info("chat gun_response"),
@@ -105,7 +105,7 @@ handle_sub_message(_SubMessage) ->
 handle_attachments(UserId, [#{<<"video_html">> := _} = Attachment | Tail]) ->
   MovieId = get_movie_id(Attachment),
   Title = get_movie_title(Attachment),
-  agner_player_server:add(MovieId, Title, UserId),
+  agner_server:add(MovieId, Title, UserId),
   handle_attachments(UserId, Tail);
 handle_attachments(UserId, [_Attachment | Tail]) ->
   handle_attachments(UserId, Tail);
@@ -159,26 +159,26 @@ resolve_intent(Text, []) ->
   {nomatch, Text}.
 
 handle_intent({next, _Captured}, _Message) ->
-  agner_player_server:next();
+  agner_server:next();
 handle_intent({volume, [Captured]}, #{<<"channel">> := Channel} = Message) when is_tuple(Captured) ->
   lager:info(jiffy:encode(Message)),
-  agner_player_server:get_volume(Channel);
+  agner_server:get_volume(Channel);
 handle_intent({volume, [Level]}, _Message) ->
-  agner_player_server:volume(Level);
+  agner_server:volume(Level);
 handle_intent({say, [Text]}, _Message) ->
-  agner_player_server:say(Text);
+  agner_server:say(Text);
 handle_intent({pause, _Captured}, _Message) ->
-  agner_player_server:pause();
+  agner_server:pause();
 handle_intent({delete, _Captured}, _Message) ->
-  agner_player_server:delete();
+  agner_server:delete();
 handle_intent({previous, _Captured}, _Message) ->
-  agner_player_server:previous();
+  agner_server:previous();
 handle_intent({seek, [To]}, _Message) ->
-  agner_player_server:seek(To);
+  agner_server:seek(To);
 handle_intent({nomatch, Text}, _Message) ->
   lager:info("Nomatch. Text: ~s", [Text]);
 handle_intent({play, [MoveId]}, _Me0ssage) ->
-  agner_player_server:play(MoveId);
+  agner_server:play(MoveId);
 handle_intent({now, _Captured}, #{<<"channel">> := Channel} = Message) ->
   lager:info(jiffy:encode(Message)),
-  agner_player_server:now(Channel).
+  agner_server:now(Channel).

@@ -1,4 +1,4 @@
--module(agner_player_client).
+-module(agner_player_master).
 
 -export([init/2, websocket_init/1, websocket_handle/2, websocket_info/2]).
 
@@ -6,7 +6,7 @@ init(Req, Opts) ->
   {cowboy_websocket, Req, Opts}.
 
 websocket_init(State) ->
-  agner_player_server:subscribe(self()),
+  agner_server:subscribe_master(self()),
   {ok, State}.
 
 websocket_handle({text, Msg}, State) ->
@@ -19,22 +19,22 @@ websocket_handle({text, Msg}, State) ->
   end.
 
 websocket_handle_message(#{<<"action">> := <<"get">>} = _ParsedJson) ->
-  ok = agner_player_server:get(),
+  ok = agner_server:get(),
   noreply;
 
 websocket_handle_message(#{<<"action">> := <<"ping">>} = _ParsedJson) ->
   {reply, jiffy:encode(#{<<"action">> => <<"pong">>})};
 
 websocket_handle_message(#{<<"action">> := <<"delete">>, <<"movieId">> := MovieId} = _ParsedJson) ->
-  ok = agner_player_server:delete(binary_to_list(MovieId)),
+  ok = agner_server:delete(binary_to_list(MovieId)),
   noreply;
 
 websocket_handle_message(#{<<"action">> := <<"reconnect_slack">>} = _ParsedJson) ->
-  ok = agner_player_server:reconnect_slack(),
+  ok = agner_server:reconnect_slack(),
   noreply;
 
 websocket_handle_message(#{<<"action">> := <<"answer">>, <<"messageId">> := MessageId, <<"answer">> := Answer} = _) ->
-  ok = agner_player_server:answer(MessageId, Answer),
+  ok = agner_server:answer(MessageId, Answer),
   noreply;
 
 websocket_handle_message(_ParsedJson) ->
@@ -116,5 +116,5 @@ websocket_info(stop, State) ->
   {stop, State};
 
 websocket_info(Info, State) ->
-  lager:info("player_client unsupported message: ~w~n", [Info]),
+  lager:info("Master player unsupported message: ~w~n", [Info]),
   {ok, State}.
